@@ -1,0 +1,691 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Poppins", "Inter", "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom Slow Animation Loops */
+  --animate-spin-slow: spin 16s linear infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-fade-in: fadeIn 0.35s ease-out forwards;
+  --animate-slide-in: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Ensure perfect responsive screen fit across all devices */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Global Cursor Pointer for all clickable and interactive elements */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+select,
+label[for],
+label.cursor-pointer,
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+button:disabled,
+[role="button"]:disabled,
+input:disabled {
+  cursor: not-allowed !important;
+}
+
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+::-webkit-scrollbar {
+  width: 7px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080D1F;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 166, 35, 0.45);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F5A623;
+}
+
+/* Specific elements that need scrollbars hidden */
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* Luxury Visible Horizontal Scrollbar for internal data tables */
+.custom-horizontal-scrollbar {
+  overflow-x: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(245, 166, 35, 0.6) rgba(0, 0, 0, 0.05) !important;
+}
+:is(.dark, .dark *) .custom-horizontal-scrollbar {
+  scrollbar-color: rgba(245, 166, 35, 0.7) rgba(255, 255, 255, 0.08) !important;
+}
+.custom-horizontal-scrollbar::-webkit-scrollbar {
+  height: 4px !important;
+  display: block !important;
+}
+.custom-horizontal-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-radius: 9999px !important;
+}
+:is(.dark, .dark *) .custom-horizontal-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.custom-horizontal-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #F5A623, #d97706) !important;
+  border-radius: 9999px !important;
+  transition: all 0.2s ease;
+}
+.custom-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #F5A623 !important;
+  height: 6px !important;
+}
+
+
+/* Luxury Transparent Mesh Backdrop - Pure Black & Pure White */
+.luxury-radial-bg {
+  background-color: #000000 !important;
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(245, 166, 35, 0.06) 0px, transparent 45%),
+    radial-gradient(at 85% 20%, rgba(255, 255, 255, 0.04) 0px, transparent 45%),
+    radial-gradient(at 50% 75%, rgba(20, 20, 20, 0.6) 0px, transparent 50%) !important;
+  background-attachment: fixed;
+  background-size: cover;
+  position: relative;
+}
+
+/* Subtle dot-matrix overlay */
+.luxury-radial-bg::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  opacity: 0.3;
+  z-index: 1;
+}
+
+/* Modern Glassmorphic Backdrop utility */
+.glass-panel {
+  background-color: rgba(10, 10, 10, 0.85) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.glass-panel-dark {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* =========================================================
+   DARK MODE = TRUE PURE BLACK (#000000) & WHITE TEXT
+   ========================================================= */
+body:not(.light-mode),
+html.dark body {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+body:not(.light-mode) .bg-neutral-950,
+body:not(.light-mode) #root .bg-neutral-950 {
+  background-color: #050505 !important;
+}
+body:not(.light-mode) .bg-neutral-900,
+body:not(.light-mode) #root .bg-neutral-900 {
+  background-color: #0D0D0D !important;
+}
+body:not(.light-mode) .bg-neutral-900\/40,
+body:not(.light-mode) #root .bg-neutral-900\/40 {
+  background-color: rgba(15, 15, 15, 0.65) !important;
+}
+body:not(.light-mode) .bg-neutral-950\/95,
+body:not(.light-mode) #root .bg-neutral-950\/95 {
+  background-color: rgba(5, 5, 5, 0.95) !important;
+}
+body:not(.light-mode) .bg-neutral-850,
+body:not(.light-mode) .bg-neutral-800,
+body:not(.light-mode) #root .bg-neutral-850,
+body:not(.light-mode) #root .bg-neutral-800 {
+  background-color: #141414 !important;
+}
+body:not(.light-mode) .border-neutral-800,
+body:not(.light-mode) .border-neutral-850,
+body:not(.light-mode) #root .border-neutral-800,
+body:not(.light-mode) #root .border-neutral-850 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+body:not(.light-mode) .bg-black\/80,
+body:not(.light-mode) .bg-black\/85,
+body:not(.light-mode) .bg-black\/90,
+body:not(.light-mode) .bg-black,
+body:not(.light-mode) #root .bg-black\/80,
+body:not(.light-mode) #root .bg-black\/85,
+body:not(.light-mode) #root .bg-black\/90,
+body:not(.light-mode) #root .bg-black {
+  background-color: rgba(0, 0, 0, 0.92) !important;
+}
+body:not(.light-mode) [class*="text-[#D1D1D1]"] {
+  color: #E4E4E7 !important;
+}
+
+/* =========================================================
+   LIGHT MODE = TRUE CRISP WHITE (#FFFFFF) & RICH BLACK TEXT
+   ========================================================= */
+body.light-mode,
+html:not(.dark) body.light-mode {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  color: #000000 !important;
+}
+
+body.light-mode::after {
+  opacity: 0 !important;
+}
+
+body.light-mode header,
+body.light-mode header nav {
+  background-color: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+  color: #000000 !important;
+}
+
+body.light-mode input, 
+body.light-mode select {
+  background-color: #FFFFFF !important;
+  border-color: #D1D5DB !important;
+  color: #000000 !important;
+}
+
+body.light-mode input:focus,
+body.light-mode select:focus {
+  border-color: #000000 !important;
+}
+
+body.light-mode .bg-neutral-950,
+body.light-mode .bg-neutral-950\/95 {
+  background-color: #FAFAFA !important;
+  background-image: none !important;
+  border-color: #E5E7EB !important;
+  color: #000000 !important;
+}
+
+body.light-mode .bg-neutral-900,
+body.light-mode .bg-neutral-900\/90 {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  border-color: #E5E7EB !important;
+  color: #000000 !important;
+}
+
+body.light-mode .bg-neutral-850,
+body.light-mode .bg-neutral-800,
+body.light-mode .bg-neutral-900\/40,
+body.light-mode .luxury-radial-bg,
+body.light-mode .glass-panel {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  border-color: rgba(212, 175, 55, 0.25) !important;
+  color: #0F172A !important;
+}
+
+/* Ensure text inside white/light-background containers in light-mode is dark for high readability */
+body.light-mode .bg-neutral-950 .text-white,
+body.light-mode .bg-neutral-900 .text-white,
+body.light-mode .bg-neutral-850 .text-white,
+body.light-mode .bg-neutral-800 .text-white,
+body.light-mode .bg-neutral-900\/40 .text-white,
+body.light-mode .glass-panel .text-white,
+body.light-mode footer .text-white,
+body.light-mode .bg-neutral-950.text-white,
+body.light-mode .bg-neutral-900.text-white,
+body.light-mode .bg-neutral-850.text-white,
+body.light-mode .bg-neutral-800.text-white,
+body.light-mode .bg-neutral-900\/40.text-white,
+body.light-mode .glass-panel.text-white {
+  color: #0F172A !important;
+}
+
+/* Specific Footer contrast in light mode */
+body.light-mode footer {
+  background-color: #FAFAFA !important;
+  border-color: #E5E7EB !important;
+  color: #18181B !important;
+}
+
+body.light-mode footer h4 {
+  color: #0F172A !important;
+}
+
+/* Preserve white text on explicitly dark buttons & containers in light mode */
+body.light-mode .bg-black,
+body.light-mode .bg-black *,
+body.light-mode button.bg-black,
+body.light-mode button.bg-black *,
+body.light-mode .btn-primary,
+body.light-mode .btn-primary * {
+  color: #FFFFFF !important;
+}
+
+body.light-mode button.bg-white,
+body.light-mode button.bg-white * {
+  color: #000000 !important;
+}
+
+/* Global High-Definition Button Modern Look */
+.btn-gold,
+button.btn-gold {
+  background: linear-gradient(135deg, #F5A623 0%, #D4AF37 100%) !important;
+  color: #0A0F24 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 14px rgba(245, 166, 35, 0.25) !important;
+  border: 1px solid rgba(245, 166, 35, 0.4) !important;
+}
+.btn-gold:hover,
+button.btn-gold:hover {
+  background: linear-gradient(135deg, #FFB833 0%, #E5BE48 100%) !important;
+  box-shadow: 0 6px 20px rgba(245, 166, 35, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+/* Ensure clean contrast on add to cart and purchase buttons */
+body.light-mode button.bg-black:hover,
+body.light-mode button.bg-black:hover * {
+  background-color: #18181B !important;
+  color: #FFFFFF !important;
+}
+
+body:not(.light-mode) button.bg-white:hover,
+body:not(.light-mode) button.bg-white:hover * {
+  background-color: #E4E4E7 !important;
+  color: #000000 !important;
+}
+
+body.light-mode .bg-neutral-950 .text-neutral-500,
+body.light-mode .bg-neutral-900 .text-neutral-500,
+body.light-mode .bg-neutral-850 .text-neutral-500,
+body.light-mode .bg-neutral-800 .text-neutral-500,
+body.light-mode .bg-neutral-900\/40 .text-neutral-500,
+body.light-mode .glass-panel .text-neutral-500 {
+  color: #71717A !important;
+}
+
+body.light-mode .bg-neutral-950 .text-neutral-400,
+body.light-mode .bg-neutral-900 .text-neutral-400,
+body.light-mode .bg-neutral-850 .text-neutral-400,
+body.light-mode .bg-neutral-800 .text-neutral-400,
+body.light-mode .bg-neutral-900\/40 .text-neutral-400,
+body.light-mode .glass-panel .text-neutral-400 {
+  color: #71717A !important;
+}
+
+body.light-mode .bg-neutral-950 .text-neutral-300,
+body.light-mode .bg-neutral-900 .text-neutral-300,
+body.light-mode .bg-neutral-850 .text-neutral-300,
+body.light-mode .bg-neutral-800 .text-neutral-300,
+body.light-mode .bg-neutral-900\/40 .text-neutral-300,
+body.light-mode .glass-panel .text-neutral-300 {
+  color: #3F3F46 !important;
+}
+
+/* Ensure SVG icons inside modified white-background areas in light mode are dark and visible */
+body.light-mode .bg-neutral-850 svg,
+body.light-mode .bg-neutral-800 svg,
+body.light-mode .bg-neutral-900\/40 svg,
+body.light-mode .glass-panel svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+/* Specific product action buttons (Wishlist, Quick View, Compare) in light mode */
+body.light-mode .product-action-btn {
+  background-color: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+  color: #000000 !important;
+}
+body.light-mode .product-action-btn svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+body.light-mode .product-action-btn:hover {
+  background-color: #000000 !important;
+  border-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+body.light-mode .product-action-btn:hover svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+/* Category Filters in light mode */
+body.light-mode .category-filter-btn,
+body.light-mode .category-mobile-btn {
+  background-color: #FFFFFF !important;
+  color: #18181B !important;
+  border-color: #E4E4E7 !important;
+}
+body.light-mode .category-filter-btn:hover,
+body.light-mode .category-mobile-btn:hover {
+  background-color: #F4F4F5 !important;
+  color: #000000 !important;
+}
+body.light-mode .category-filter-btn.active-cat-btn,
+body.light-mode .category-mobile-btn.active-mobile-cat {
+  background-color: #F5A623 !important;
+  color: #0A0F24 !important;
+  border-color: #F5A623 !important;
+  font-weight: 700 !important;
+}
+body.light-mode .category-filter-btn.active-cat-btn svg,
+body.light-mode .category-mobile-btn.active-mobile-cat svg {
+  color: #0A0F24 !important;
+  stroke: #0A0F24 !important;
+}
+
+/* Beautiful custom slider track and circle thumb styles */
+input[type="range"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px !important;
+  border-radius: 9999px !important;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  margin-top: -5px !important;
+}
+
+body.light-mode input[type="range"]::-webkit-slider-runnable-track {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+body.light-mode input[type="range"]::-webkit-slider-thumb {
+  background-color: #ffffff !important;
+  border: 2px solid #D4AF37 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+body:not(.light-mode) input[type="range"]::-webkit-slider-runnable-track {
+  background-color: #17171a !important;
+}
+body:not(.light-mode) input[type="range"]::-webkit-slider-thumb {
+  background-color: #D4AF37 !important;
+  border: 2px solid #17171a !important;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.3) !important;
+}
+
+body.light-mode .from-neutral-950,
+body.light-mode .from-neutral-900 {
+  --tw-gradient-from: #FFFFFF !important;
+  --tw-gradient-to: #FFFFFF !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+body.light-mode .via-neutral-900 {
+  --tw-gradient-via: #FAFAF7 !important;
+}
+
+body.light-mode .to-neutral-950 {
+  --tw-gradient-to: #FAFAF7 !important;
+}
+
+body.light-mode .text-neutral-400,
+body.light-mode .text-neutral-500 {
+  color: #4B5563 !important; /* Medium gray text for high contrast on light mode */
+}
+
+body.light-mode .border-neutral-800,
+body.light-mode .border-neutral-850 {
+  border-color: #E5E7EB !important;
+}
+
+body.light-mode .text-neutral-300 {
+  color: #374151 !important;
+}
+
+body.light-mode .glass-panel {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 1.3 Smooth Page Transitions keyframes */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-page-in {
+  animation: pageIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 1.4 Scroll Reveal transition */
+.reveal-entry {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-entry.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 1.5 Silver Shimmer Skeleton Loading */
+.gold-shimmer {
+  background: linear-gradient(90deg, #101010 25%, #222222 50%, #101010 75%);
+  background-size: 200% 100%;
+  animation: goldShimmer 1.5s infinite linear;
+  border-radius: 12px;
+}
+@keyframes goldShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* CSS Tooltip system (3.7) */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  pointer-events: none;
+  background-color: rgba(10, 10, 10, 0.95);
+  border: 1px solid #D1D1D1;
+  color: #E5E5E5;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 9px;
+  white-space: nowrap;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 50;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Global Button Interactive Micro-interactions & Color Deepening */
+button,
+[role="button"],
+.clickable-btn {
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+button:hover,
+[role="button"]:hover,
+.clickable-btn:hover {
+  filter: brightness(1.08) saturate(1.05);
+}
+
+button:active,
+[role="button"]:active,
+.clickable-btn:active {
+  transform: scale(0.96) !important;
+  filter: brightness(0.82) contrast(1.08) !important;
+}
+
+/* Underline effect for sub-navbar links */
+.nav-underline-anim {
+  position: relative;
+  transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  letter-spacing: 0.08em !important;
+  font-family: var(--font-sans) !important;
+}
+
+.nav-underline-anim::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background: linear-gradient(90deg, #D4AF37, #F59E0B) !important;
+  transform-origin: bottom right;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.nav-underline-anim:hover::after,
+.nav-underline-anim.active::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+body.light-mode .nav-underline-anim::after {
+  background: #000000 !important;
+}
+
+/* Premium Navigation Icon Button Circle Scale & Hover Glows */
+.premium-nav-icon-btn {
+  padding: 10px !important;
+  border-radius: 9999px !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.premium-nav-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: #FFFFFF !important;
+  transform: scale(1.12) !important;
+}
+
+.premium-nav-icon-btn:active {
+  transform: scale(0.94) !important;
+}
+
+body.light-mode .premium-nav-icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  color: #000000 !important;
+}
+
+/* Chat Widget Specific Scrollbars are now hidden globally */
+
+/* Invoice Modal Custom Scrollbar */
+.invoice-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 166, 35, 0.4) rgba(0, 0, 0, 0.05);
+}
+
+.invoice-modal-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.invoice-modal-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 9999px;
+}
+
+.invoice-modal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(245, 166, 35, 0.4);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.invoice-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 166, 35, 0.7);
+}
+
+
