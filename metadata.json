@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Niyon",
+  "description": "Alike-ND is a premium sovereign luxury marketplace, wholesale atelier guild, and interactive trade portal featuring a Swiss-grade UI, custom item matching, secure wallets, and AI-driven recommendations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
