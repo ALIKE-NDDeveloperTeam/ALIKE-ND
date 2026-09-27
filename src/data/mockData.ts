@@ -240,7 +240,10 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "jewellery",
+<<<<<<< HEAD
     audience: "unisex",
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "TRENDING",
     description: "An elegant Italian-crafted Venetian chain dipped in authentic 18-karat gold. Designed with precision linkage for a comfortable feel and rich glow.",
     specifications: {
@@ -295,7 +298,10 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "fashion",
+<<<<<<< HEAD
     audience: "women",
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "HOT",
     description: "Flowing beautifully, this mulberry silk evening gown is tailored precisely for VIP cocktail galas, featuring structured pleats and gold thread embroidery.",
     specifications: {
@@ -458,7 +464,10 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "beauty",
+<<<<<<< HEAD
     audience: "unisex",
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "SALE",
     description: "Enriched with real micro gold leaf flakes and organic hyaluronic essence for stellar deep moisturization and youthful golden radiance.",
     specifications: {
@@ -612,7 +621,10 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "beauty",
+<<<<<<< HEAD
     audience: "unisex",
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "SALE",
     description: "Hand-poured premium soy candle scented with heavy organic amber oil and pure gold leaf details. Up to 60 hours clean, non-toxic burn time.",
     specifications: {
@@ -755,6 +767,7 @@ export const PRODUCTS: Product[] = [
     },
     colors: ["Natural Golden Blend"],
     sizes: ["1kg Duo Pack", "500g Pack"]
+<<<<<<< HEAD
   },
   {
     id: 23,
@@ -853,6 +866,8 @@ export const PRODUCTS: Product[] = [
     },
     colors: ["Warm Oat", "Cloud White"],
     sizes: ["0-3M", "3-6M", "6-12M", "12-18M"]
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   }
 ];
 

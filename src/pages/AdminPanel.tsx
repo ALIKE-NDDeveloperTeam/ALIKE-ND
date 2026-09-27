@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useEffect, useState, FormEvent, useRef } from "react";
+=======
+import React, { useEffect, useState, FormEvent } from "react";
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import "../styles/AdminPanel.css";
 import { adminApi } from "./adminApi";
 import { 
@@ -75,6 +79,7 @@ import {
   CreditCard,
   Building,
   FileCheck,
+<<<<<<< HEAD
   Landmark,
   Upload,
   Camera,
@@ -93,6 +98,10 @@ import {
   formatBannersForExcel,
   formatAdminUsersForExcel
 } from "../utils/exportToExcel";
+=======
+  Landmark
+} from "lucide-react";
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 export type Section = "dashboard" | "products" | "orders" | "sellers" | "customers" | "banners" | "reports" | "adminUsers" | "activity" | "commission";
 
@@ -839,6 +848,7 @@ export default function AdminPanel({
     return true;
   });
 
+<<<<<<< HEAD
   const handleExportCurrentSection = () => {
     switch (section) {
       case "orders": {
@@ -953,6 +963,8 @@ export default function AdminPanel({
     }
   };
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   return (
     <div className="ap-root">
       {/* Top Role Indicator Banner */}
@@ -1137,6 +1149,7 @@ export default function AdminPanel({
             </div>
 
             <div className="flex items-center gap-2">
+<<<<<<< HEAD
               {/* Dynamic Excel Export Button */}
               <button
                 type="button"
@@ -1149,6 +1162,8 @@ export default function AdminPanel({
                 <span>Export to Excel</span>
               </button>
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
               <button
                 onClick={() => loadAll()}
                 disabled={loading}
@@ -1517,6 +1532,7 @@ export default function AdminPanel({
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
+<<<<<<< HEAD
 
                   <button
                     type="button"
@@ -1531,6 +1547,8 @@ export default function AdminPanel({
                     <Download className="w-3.5 h-3.5" />
                     <span>Export to Excel</span>
                   </button>
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                 </div>
 
                 <div className="ap-card">
@@ -2469,6 +2487,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
   const [isFlashSale, setIsFlashSale] = useState(product?.isFlashSale ?? (product?.badge === "SALE"));
   const [rating, setRating] = useState(product?.rating !== undefined ? String(product.rating) : "4.8");
   const [reviewsCount, setReviewsCount] = useState(product?.reviewsCount !== undefined ? String(product.reviewsCount) : "148");
+<<<<<<< HEAD
   const initialImagesList: string[] = (product?.images && product.images.length > 0)
     ? product.images
     : product?.image
@@ -2480,6 +2499,10 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
   const [urlInput, setUrlInput] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+=======
+  const [image, setImage] = useState(product?.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600");
+  const [additionalImages, setAdditionalImages] = useState((product?.images || []).slice(1).join("\n"));
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   const [description, setDescription] = useState(product?.description || "Immersive active noise-cancelling headphones tuned to golden standard.");
   const [isWholesale, setIsWholesale] = useState(product?.isWholesale || false);
   const [wholesalePrice, setWholesalePrice] = useState(product?.wholesalePrice ? String(product.wholesalePrice) : "2999");
@@ -2497,6 +2520,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
   const numMrp = Number(mrp) || numPrice;
   const calculatedDiscount = numMrp > numPrice ? Math.round(((numMrp - numPrice) / numMrp) * 100) : 0;
 
+<<<<<<< HEAD
   // File upload reader
   const handleFileUpload = (files: FileList | File[]) => {
     const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
@@ -2577,6 +2601,8 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
     }
   };
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -2584,8 +2610,12 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
       return;
     }
 
+<<<<<<< HEAD
     const finalPrimary = image.trim() || images[0] || "";
     const finalImagesList = images.length > 0 ? images.filter(Boolean) : (finalPrimary ? [finalPrimary] : []);
+=======
+    const imagesList = [image.trim(), ...additionalImages.split("\n").map(s => s.trim()).filter(Boolean)];
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
     onSave({
       id: product?.id || Date.now(),
@@ -2602,8 +2632,13 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
       isFlashSale: Boolean(isFlashSale),
       rating: Number(rating) || 4.8,
       reviewsCount: Number(reviewsCount) || 120,
+<<<<<<< HEAD
       image: finalPrimary,
       images: finalImagesList,
+=======
+      image: image.trim(),
+      images: imagesList,
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
       description: description.trim(),
       isWholesale: Boolean(isWholesale),
       wholesalePrice: Number(wholesalePrice) || 0,
@@ -2972,6 +3007,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
               </div>
             </div>
 
+<<<<<<< HEAD
             {/* Row 6: Multi-Image Upload & Management */}
             <div className="space-y-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-200">
               <div className="flex items-center justify-between">
@@ -3154,6 +3190,24 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                   ⚠️ At least one product image is recommended for storefront display.
                 </p>
               )}
+=======
+            {/* Row 6: Image URL & Preview */}
+            <div className="space-y-2">
+              <label className="block font-bold text-neutral-700 uppercase font-mono">Primary Image URL *</label>
+              <div className="flex gap-3 items-center">
+                <input
+                  type="url"
+                  value={image}
+                  onChange={(e) => setImage(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="ap-input font-mono flex-1 text-xs"
+                  required
+                />
+                <div className="w-10 h-10 rounded-lg overflow-hidden border bg-neutral-100 shrink-0">
+                  <img src={image} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                </div>
+              </div>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
             </div>
 
             {/* Row 7: Description */}

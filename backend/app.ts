@@ -14,7 +14,10 @@ import bannerRoutes from "./routes/banners";
 import commissionRoutes, { getActiveCommissionRate } from "./routes/commission";
 import { connectMongoDB, isMongoConnected, memoryStore } from "./store";
 import { startOrderAutomationJob, progressOrderStatuses } from "./services/orderAutomation";
+<<<<<<< HEAD
 import { dispatchOrderNotificationEmails } from "./services/mailer";
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import Product from "./models/Product";
 import Order from "./models/Order";
 import Banner from "./models/Banner";
@@ -35,6 +38,7 @@ connectMongoDB()
 
 const app = express();
 
+<<<<<<< HEAD
 // Configurable CORS origins with fallback to local development defaults
 const defaultAllowedOrigins = [
   "http://localhost:3000",
@@ -79,6 +83,10 @@ app.use(
 );
 app.use(express.json({ limit: "30mb" }));
 app.use(express.urlencoded({ limit: "30mb", extended: true }));
+=======
+app.use(cors());
+app.use(express.json());
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 // Health check endpoints for ingress and container probes
 app.get(["/api/health", "/health", "/healthz"], (_req, res) => {
@@ -260,6 +268,7 @@ app.post("/api/orders", async (req, res) => {
 
     memoryStore.orders.unshift(memoryOrder);
 
+<<<<<<< HEAD
     // Asynchronously dispatch real-time Seller/Admin Order Alert and Customer Confirmation emails
     dispatchOrderNotificationEmails({
       orderNumber,
@@ -280,6 +289,8 @@ app.post("/api/orders", async (req, res) => {
       console.warn("Order notification email dispatch notice:", mailErr);
     });
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     return res.status(201).json({
       success: true,
       order: createdDoc || {
@@ -299,6 +310,7 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 // Dedicated Real-time Order Notification Dispatch Route
 app.post("/api/orders/notify", async (req, res) => {
   try {
@@ -310,6 +322,8 @@ app.post("/api/orders/notify", async (req, res) => {
   }
 });
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 // Get most recent order details
 app.get("/api/orders/latest", async (_req, res) => {
   try {

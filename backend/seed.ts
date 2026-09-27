@@ -52,9 +52,15 @@ export async function seed() {
   // --- sample data (only if collections are empty) ---
   if ((await Product.countDocuments()) === 0) {
     await Product.insertMany([
+<<<<<<< HEAD
       { name: "Chronograph Steel Watch", category: "Watches", price: 1250, stock: 14, emoji: "⌚", audience: "men" },
       { name: "Quilted Leather Handbag", category: "Handbags", price: 2400, stock: 6, emoji: "👜", audience: "women" },
       { name: "Cashmere Overcoat", category: "Apparel", price: 980, stock: 1, emoji: "🧥", audience: "unisex" },
+=======
+      { name: "Chronograph Steel Watch", category: "Watches", price: 1250, stock: 14, emoji: "⌚" },
+      { name: "Quilted Leather Handbag", category: "Handbags", price: 2400, stock: 6, emoji: "👜" },
+      { name: "Cashmere Overcoat", category: "Apparel", price: 980, stock: 1, emoji: "🧥" },
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     ]);
     console.log("Seeded sample products");
   }

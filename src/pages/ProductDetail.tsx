@@ -5,7 +5,10 @@ import { Product } from '../types';
 import { CATEGORIES } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 import GlassCloseButton from '../components/GlassCloseButton';
+<<<<<<< HEAD
 import FavoriteButton from '../components/FavoriteButton';
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 const POPULAR_LOCATIONS = [
   { city: 'New Delhi', pincode: '110001', state: 'Delhi' },
@@ -520,6 +523,19 @@ export default function ProductDetail({
     touchEndX.current = null;
   };
 
+<<<<<<< HEAD
+=======
+  const [pincode, setPincode] = useState(() => {
+    return localStorage.getItem('alike_pincode') || '110001';
+  });
+  const [checkingPincode, setCheckingPincode] = useState(false);
+  const [pincodeStatus, setPincodeStatus] = useState<{
+    success: boolean;
+    message: string;
+    dateRange?: string;
+  } | null>(null);
+
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   // Delivery Destination Location State & Modal
   const [deliveryLocation, setDeliveryLocation] = useState<{
     city: string;
@@ -603,6 +619,97 @@ export default function ProductDetail({
     }
   };
 
+<<<<<<< HEAD
+=======
+  const executePincodeCheck = (rawPin: string) => {
+    const cleanPin = (rawPin || '').trim();
+    // Indian standard 6-digit PIN code format check: 110001 - 899999 or regex ^[1-9][0-9]{5}$
+    const indianPincodeRegex = /^[1-9][0-9]{5}$/;
+    if (!cleanPin) {
+      setPincodeStatus(null);
+      return;
+    }
+    if (!indianPincodeRegex.test(cleanPin)) {
+      setPincodeStatus({
+        success: false,
+        message: 'Invalid PIN code. Please enter a valid 6-digit Indian PIN code (110001 – 899999).'
+      });
+      return;
+    }
+
+    setCheckingPincode(true);
+    setPincodeStatus(null);
+
+    // Save and remember in localStorage so users do not have to retype
+    localStorage.setItem('alike_pincode', cleanPin);
+
+    setTimeout(() => {
+      setCheckingPincode(false);
+
+      // Hardcoded test pincodes to demonstrate non-serviceable state
+      // NOTE: In production, this would call a real courier/logistics API (e.g. Delhivery, Shiprocket, Blue Dart)
+      const EXCLUDED_TEST_PINCODES = ['999999', '000000', '123456', '888888'];
+      if (EXCLUDED_TEST_PINCODES.includes(cleanPin)) {
+        setPincodeStatus({
+          success: false,
+          message: 'Currently not deliverable to this pincode. Please try an alternative delivery address.'
+        });
+        showToast(`Pincode ${cleanPin} is currently not serviceable`, 'error');
+        return;
+      }
+
+      if (product.eligibleFor20MinDelivery) {
+        setPincodeStatus({
+          success: true,
+          message: `⚡ Instant 20-Min Delivery available for PIN ${cleanPin}! Dispatched from local express hub.`,
+          dateRange: 'Today within 20–30 mins'
+        });
+        showToast(`⚡ 20-Minute Express Delivery available for PIN ${cleanPin}!`, 'success');
+      } else {
+        // NOTE: Placeholder delivery date estimate (3-5 business days from today) for demonstration.
+        // In production, this would call a real courier/logistics API to determine real-time route serviceability.
+        const today = new Date();
+        const d1 = new Date(today);
+        d1.setDate(today.getDate() + 3);
+        const d2 = new Date(today);
+        d2.setDate(today.getDate() + 5);
+
+        const dateRangeStr = `${d1.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })} – ${d2.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+        setPincodeStatus({
+          success: true,
+          message: `✓ Delivers by ${dateRangeStr} (3–5 business days)`,
+          dateRange: dateRangeStr
+        });
+        showToast(`Delivers to ${cleanPin} by ${dateRangeStr}`, 'success');
+      }
+
+      // Sync deliveryLocation with checked PIN code
+      const matched = POPULAR_LOCATIONS.find((l) => l.pincode === cleanPin);
+      if (matched) {
+        setDeliveryLocation(matched);
+        localStorage.setItem('alike_delivery_location', JSON.stringify(matched));
+      } else {
+        const customLoc = { city: `Region ${cleanPin.slice(0, 2)}`, pincode: cleanPin, state: 'India' };
+        setDeliveryLocation(customLoc);
+        localStorage.setItem('alike_delivery_location', JSON.stringify(customLoc));
+      }
+    }, 450);
+  };
+
+  // Auto-run initial check on mount if pincode is stored
+  useEffect(() => {
+    const savedPin = localStorage.getItem('alike_pincode') || '110001';
+    if (savedPin && /^[1-9][0-9]{5}$/.test(savedPin)) {
+      executePincodeCheck(savedPin);
+    }
+  }, [product.id]);
+
+  const handleCheckPincode = (e: FormEvent) => {
+    e.preventDefault();
+    executePincodeCheck(pincode);
+  };
+
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   const showEmiPlansToast = () => {
     const monthlyEmi = Math.round(price / 12);
     const sixEmi = Math.round(price / 6);
@@ -1404,6 +1511,84 @@ export default function ProductDetail({
             </button>
           </div>
 
+<<<<<<< HEAD
+=======
+          {/* PINCODE SERVICEABILITY CHECK WIDGET (Indian Marketplace Listing Norms) */}
+          <div className={`p-3.5 rounded-xl border text-xs transition-colors space-y-2.5 ${
+            isLightMode ? 'bg-[#FAFAF7] border-[#EADFC9]' : 'bg-[#0B1B32]/70 border-[#162744]'
+          }`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-bold flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-mono">
+                <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Pincode Delivery Check</span>
+              </span>
+              <span className="text-[10px] text-neutral-400 font-mono">PAN-India Serviceable</span>
+            </div>
+
+            <form onSubmit={handleCheckPincode} className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-digit PIN code (e.g. 110001)"
+                  value={pincode}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setPincode(clean);
+                    if (clean.length === 6) {
+                      executePincodeCheck(clean);
+                    } else if (pincodeStatus) {
+                      setPincodeStatus(null);
+                    }
+                  }}
+                  className={`w-full px-3 py-2 text-xs rounded-xl border font-mono tracking-wider focus:outline-none transition-all ${
+                    isLightMode 
+                      ? 'bg-white border-neutral-300 text-neutral-900 focus:border-amber-500' 
+                      : 'bg-[#0A0F24] border-neutral-700 text-white focus:border-amber-500'
+                  }`}
+                />
+                {checkingPincode && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin absolute right-3 top-2.5 text-amber-500" />
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={checkingPincode || pincode.length !== 6}
+                className={`px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${
+                  pincode.length === 6
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-neutral-950 font-black shadow-xs active:scale-95'
+                    : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
+                }`}
+              >
+                {checkingPincode ? 'Checking...' : 'Check'}
+              </button>
+            </form>
+
+            {/* Pincode verification result */}
+            {pincodeStatus && (
+              <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 animate-fadeIn ${
+                pincodeStatus.success
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
+              }`}>
+                {pincodeStatus.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                ) : (
+                  <Info className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1 text-[11px] leading-relaxed">
+                  <p className="font-semibold">{pincodeStatus.message}</p>
+                  {pincodeStatus.success && (
+                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      Cash on Delivery & standard return policies apply to this destination.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           {/* Quick Indian Statutory Marketplace Badges */}
           <div className={`p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono ${
             isLightMode ? 'bg-[#FAFAF7] border-[#EADFC9] text-neutral-600' : 'bg-[#0B1B32]/40 border-[#162744] text-slate-300'
@@ -1779,6 +1964,50 @@ export default function ProductDetail({
                 </div>
               </div>
             </div>
+<<<<<<< HEAD
+=======
+
+            {/* Review Trigger Banner */}
+            <div className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+              isLightMode 
+                ? 'bg-neutral-50/90 border-neutral-200/80 shadow-xs' 
+                : 'bg-neutral-900/80 border-neutral-800 shadow-md'
+            }`}>
+              <div className="flex items-center gap-3.5">
+                <div className={`p-2.5 rounded-xl shrink-0 flex items-center justify-center ${
+                  isLightMode ? 'bg-neutral-900 text-white shadow-xs' : 'bg-white text-neutral-950 shadow-xs'
+                }`}>
+                  <MessageSquare className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <p className={`text-sm sm:text-base font-bold ${isLightMode ? 'text-neutral-900' : 'text-white'}`}>
+                    Have you experienced this piece?
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Share your genuine impressions with discerning buyers
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="write-review-trigger-btn"
+                onClick={() => {
+                  scrollToSection('reviews');
+                  setShowWriteForm(true);
+                }}
+                className={`group px-4.5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm tracking-wide transition-all duration-200 shadow-xs flex items-center justify-center gap-2 cursor-pointer self-start sm:self-auto active:scale-95 border ${
+                  isLightMode
+                    ? 'bg-neutral-900 hover:bg-neutral-800 text-white border-neutral-900'
+                    : 'bg-white hover:bg-neutral-100 text-neutral-950 border-white'
+                }`}
+              >
+                <PenLine className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                  isLightMode ? 'text-white' : 'text-neutral-950'
+                }`} />
+                <span>Write a Review</span>
+              </button>
+            </div>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           </div>
 
           {/* Section 2: Customer Reviews & Ratings */}
@@ -2419,6 +2648,7 @@ export default function ProductDetail({
                     }`}>
                       <img src={p.image} alt={p.name} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
                       <div className={`absolute top-2 right-2 z-10 ${isRelWishlisted ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'} transition-opacity`}>
+<<<<<<< HEAD
                         <FavoriteButton
                           id={`wishlist-btn-${p.id}`}
                           isLiked={isRelWishlisted}
@@ -2428,6 +2658,20 @@ export default function ProductDetail({
                           }}
                           title={isRelWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                         />
+=======
+                        <button
+                          id={`wishlist-btn-${p.id}`}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleWishlist(p);
+                          }}
+                          className="p-1.5 rounded-full border border-solid border-white/20 bg-black/75 hover:bg-[#F5A623] text-white hover:text-[#0F1A3C] transition-all shadow-md active:scale-90 cursor-pointer product-action-btn backdrop-blur-xs"
+                          title={isRelWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                        >
+                          <Heart className={`w-3.5 h-3.5 transition-transform ${isRelWishlisted ? 'fill-red-500 text-red-500 hover:text-red-600 animate-heart-pop' : ''}`} />
+                        </button>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                       </div>
                     </div>
                     <div>

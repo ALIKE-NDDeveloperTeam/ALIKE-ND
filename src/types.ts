@@ -17,7 +17,10 @@ export interface Product {
   images?: string[];
   category: string;
   subCategory?: string;
+<<<<<<< HEAD
   audience?: 'men' | 'women' | 'boys' | 'girls' | 'kids' | 'unisex' | string;
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   eligibleFor20MinDelivery?: boolean;
   badge?: 'SALE' | 'HOT' | 'NEW' | 'TRENDING' | 'LIMITED' | string;
   isFlashSale?: boolean;

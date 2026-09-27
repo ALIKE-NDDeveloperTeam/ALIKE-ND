@@ -12,20 +12,33 @@ export function getMailerTransporter(): any {
   // causes stale/dead socket reuse and long timeouts when functions unfreeze.
   // Using direct connection with tight socket timeouts ensures rapid delivery.
   return nodemailer.createTransport({
+<<<<<<< HEAD
     service: "gmail",
+=======
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // Direct SSL handshake is faster and more reliable than STARTTLS on 587
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     auth: {
       user,
       pass,
     },
+<<<<<<< HEAD
     connectionTimeout: 10000, // 10s connection timeout
     greetingTimeout: 8000,    // 8s greeting timeout
     socketTimeout: 15000,     // 15s socket timeout
+=======
+    connectionTimeout: 8000, // 8s connection timeout
+    greetingTimeout: 5000,   // 5s greeting timeout
+    socketTimeout: 10000,    // 10s socket timeout
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     tls: {
       rejectUnauthorized: false,
     },
   });
 }
 
+<<<<<<< HEAD
 export interface OrderItemNotification {
   title: string;
   quantity: number;
@@ -380,6 +393,8 @@ export async function dispatchOrderNotificationEmails(orderData: any) {
   }
 }
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 export async function sendOtpEmail(toEmail: string, otpCode: string, purpose: string = "verification") {
   const user = process.env.GMAIL_USER?.trim();
   const pass = process.env.GMAIL_APP_PASSWORD?.trim();

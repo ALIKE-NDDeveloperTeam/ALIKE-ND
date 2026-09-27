@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Eye, Heart, GitCompare, ShoppingCart, Star, PackageOpen, Check, Store, Zap } from 'lucide-react';
 import { Product } from '../types';
+<<<<<<< HEAD
 import FavoriteButton from './FavoriteButton';
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 interface ProductCardProps {
   product: Product;
@@ -121,6 +124,7 @@ export default function ProductCard({
         )}
 
         {/* Action Buttons overlay positioned inside image container */}
+<<<<<<< HEAD
         <div className={`absolute top-2 right-2 flex flex-col gap-1.5 ${isWishlisted ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'} transition-all duration-200 z-10 items-center`}>
           <FavoriteButton
             id={`wishlist-btn-${id}`}
@@ -131,6 +135,31 @@ export default function ProductCard({
             }}
             title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
           />
+=======
+        <div className={`absolute top-2 right-2 flex flex-col gap-1 ${isWishlisted ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'} transition-all duration-200 z-10`}>
+          <button
+            id={`wishlist-btn-${id}`}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWishlist(product);
+            }}
+            className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md active:scale-90 cursor-pointer product-action-btn flex items-center justify-center group/heartbtn ${
+              isWishlisted
+                ? 'bg-rose-500/20 dark:bg-rose-950/50 border border-rose-400/60 text-rose-500 shadow-[0_2px_12px_rgba(244,63,94,0.3)] hover:bg-rose-500/30'
+                : 'bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/85 border border-white/70 dark:border-white/20 text-neutral-600 dark:text-white/80 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-300/70 dark:hover:border-rose-500/40 hover:shadow-[0_2px_12px_rgba(244,63,94,0.2)]'
+            }`}
+            title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+          >
+            <Heart
+              className={`w-3.5 h-3.5 transition-all duration-200 ${
+                isWishlisted
+                  ? 'fill-red-500 text-red-500 hover:text-red-600 animate-heart-pop'
+                  : 'group-hover/heartbtn:scale-115 group-hover/heartbtn:text-rose-500 stroke-[2.2]'
+              }`}
+            />
+          </button>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           <button
             id={`quickview-btn-${id}`}
             type="button"

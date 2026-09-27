@@ -29,8 +29,12 @@ import {
   User,
   PackageCheck,
   Trash2,
+<<<<<<< HEAD
   Printer,
   Heart
+=======
+  Printer
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 } from 'lucide-react';
 import { Address, CartItem, Order } from '../types';
 import InvoiceModal from '../components/InvoiceModal';
@@ -339,6 +343,7 @@ export default function Checkout({
           { num: 3, label: 'Payment' },
           { num: 4, label: 'Confirm' },
         ].map((s) => (
+<<<<<<< HEAD
           <div
             key={s.num}
             onClick={() => {
@@ -349,12 +354,19 @@ export default function Checkout({
               (s.num === 1 || (s.num === 2 && step === 3)) ? 'cursor-pointer group' : ''
             }`}
           >
+=======
+          <div key={s.num} className="flex flex-col items-center gap-1.5">
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border border-solid transition-all ${
                 s.num === step
                   ? 'bg-[#0F1A3C] text-[#F5A623] border-[#F5A623] shadow-md dark:bg-[#F5A623] dark:text-[#0F1A3C]'
                   : s.num < step
+<<<<<<< HEAD
                   ? 'bg-emerald-500 text-white border-emerald-500 group-hover:scale-105'
+=======
+                  ? 'bg-emerald-500 text-white border-emerald-500'
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                   : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-400 border-neutral-300 dark:border-neutral-800'
               }`}
             >
@@ -582,6 +594,7 @@ export default function Checkout({
                         ₹{displayTotal.toLocaleString('en-IN')}
                       </span>
                     </div>
+<<<<<<< HEAD
 
                     {/* Custom Thank You Note under Bill */}
                     <div className="mt-3 p-3.5 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-xl text-center flex items-center justify-center space-x-2 shadow-xs">
@@ -590,6 +603,8 @@ export default function Checkout({
                         ALIKE ND te shopping korar jonno Thanks, abar asben shopping korte!
                       </p>
                     </div>
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                   </div>
                 </div>
               </>
@@ -667,6 +682,7 @@ export default function Checkout({
             {step === 2 && (
               /* PANEL A: ADDRESS SELECT */
               <div className="p-6 bg-white dark:bg-neutral-900 border border-solid border-neutral-200 dark:border-neutral-800 rounded-3xl space-y-5 shadow-sm" id="address-selection-panel">
+<<<<<<< HEAD
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center space-x-3">
                     <button
@@ -691,6 +707,18 @@ export default function Checkout({
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add New Address</span>
+=======
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-black text-[#0F1A3C] dark:text-white uppercase tracking-wider">
+                    Select Dispatch Destination
+                  </h3>
+                  <button
+                    id="add-new-address-toggle"
+                    onClick={() => setShowAddressForm(!showAddressForm)}
+                    className="text-xs text-[#F5A623] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add New Address
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                   </button>
                 </div>
 

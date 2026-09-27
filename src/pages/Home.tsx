@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useState, useEffect, useMemo, useRef } from 'react';
+=======
+import { useState, useEffect, useMemo } from 'react';
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Zap,
@@ -23,7 +27,10 @@ import {
   Utensils,
   Sofa,
   Briefcase,
+<<<<<<< HEAD
   ChevronLeft,
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   ChevronRight,
   Star,
   Quote,
@@ -408,6 +415,7 @@ export default function Home({
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
+<<<<<<< HEAD
   // Browse Categories interactive scroll & drag state
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollCatLeft, setCanScrollCatLeft] = useState(false);
@@ -558,6 +566,10 @@ export default function Home({
       clearTimeout(autoScrollResumeTimerRef.current);
     };
   }, [isCatInteracting, isDraggingCategory]);
+=======
+  // Browse Categories Marquee pause state
+  const [isCategoryMarqueePaused, setIsCategoryMarqueePaused] = useState(false);
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
   // All categories full modal view state
   const [isAllCategoriesModalOpen, setIsAllCategoriesModalOpen] = useState(false);
@@ -920,6 +932,7 @@ export default function Home({
           </button>
         </div>
 
+<<<<<<< HEAD
         {/* Categories Carousel Container with smooth scrolling & drag navigation */}
         <div 
           className="relative group/carousel py-1"
@@ -1018,6 +1031,43 @@ export default function Home({
               touchAction: 'pan-y',
             }}
           >
+=======
+        {/* Categories Carousel Container with seamless background */}
+        <div className="relative overflow-hidden py-1">
+          {/* Left & Right gradient fade masks for seamless edge transitions */}
+          <div 
+            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-6 sm:w-16 z-10 bg-gradient-to-r transition-colors duration-300 ${
+              isLightMode 
+                ? 'from-white/90 via-white/40 to-transparent' 
+                : 'from-[#0B1330]/90 via-[#0B1330]/40 to-transparent'
+            }`} 
+          />
+          <div 
+            className={`pointer-events-none absolute right-0 top-0 bottom-0 w-6 sm:w-16 z-10 bg-gradient-to-l transition-colors duration-300 ${
+              isLightMode 
+                ? 'from-white/90 via-white/40 to-transparent' 
+                : 'from-[#0B1330]/90 via-[#0B1330]/40 to-transparent'
+            }`} 
+          />
+
+          {/* Marquee Track: Duplicated list translated by -50% for zero-jump continuous infinite animation */}
+          <div
+            className="group relative flex overflow-hidden py-2 select-none"
+            onMouseEnter={() => setIsCategoryMarqueePaused(true)}
+            onMouseLeave={() => setIsCategoryMarqueePaused(false)}
+            onTouchStart={() => setIsCategoryMarqueePaused(true)}
+            onTouchEnd={() => {
+              // Graceful timeout so user can comfortably tap/inspect without immediate movement
+              setTimeout(() => setIsCategoryMarqueePaused(false), 900);
+            }}
+          >
+            <div
+              className="flex gap-3 sm:gap-6 shrink-0 animate-category-marquee"
+              style={{
+                animationPlayState: isCategoryMarqueePaused ? 'paused' : 'running',
+              }}
+            >
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
               {[
                 ...CATEGORIES.filter((c) => c.id !== 'all'),
                 ...CATEGORIES.filter((c) => c.id !== 'all')
@@ -1040,6 +1090,7 @@ export default function Home({
                   <div
                     key={`${cat.id}-${idx}`}
                     id={`cat-card-${cat.id}-${idx}`}
+<<<<<<< HEAD
                     onClick={(e) => {
                       if (hasDraggedRef.current || touchHasMovedRef.current) {
                         e.preventDefault();
@@ -1048,6 +1099,9 @@ export default function Home({
                       }
                       onNavigate('category_search', cat.id);
                     }}
+=======
+                    onClick={() => onNavigate('category_search', cat.id)}
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                     className="group/card relative cursor-pointer w-28 sm:w-36 md:w-40 shrink-0 flex flex-col items-center select-none transition-all duration-300 transform-gpu active:scale-95"
                   >
                     {/* Thumbnail Frame (Rounded Square with soft shadow) */}
@@ -1121,6 +1175,7 @@ export default function Home({
               })}
             </div>
           </div>
+<<<<<<< HEAD
 
         {/* Pure CSS Keyframes for infinite marquee with hover & touch pause */}
         <style>{`
@@ -1131,6 +1186,12 @@ export default function Home({
           .scrollbar-hide::-webkit-scrollbar {
             display: none;
           }
+=======
+        </div>
+
+        {/* Pure CSS Keyframes for infinite marquee with hover & touch pause */}
+        <style>{`
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           @keyframes category-marquee-slide {
             0% {
               transform: translate3d(0, 0, 0);

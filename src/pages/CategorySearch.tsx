@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+<<<<<<< HEAD
 import { SlidersHorizontal, Grid, List, ChevronRight, ArrowLeft, Zap, Sparkles, Heart, Users, X } from 'lucide-react';
 import { Product } from '../types';
 import { CATEGORIES } from '../data/mockData';
@@ -36,6 +37,12 @@ export const checkAudienceMatch = (productAudience: string, selectedAudiences: s
     return false;
   });
 };
+=======
+import { SlidersHorizontal, Grid, List, ChevronRight, ArrowLeft, Zap, Sparkles, Heart } from 'lucide-react';
+import { Product } from '../types';
+import { CATEGORIES } from '../data/mockData';
+import ProductCard from '../components/ProductCard';
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 interface CategorySearchProps {
   products: Product[];
@@ -68,6 +75,7 @@ export default function CategorySearch({
 }: CategorySearchProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
+<<<<<<< HEAD
   const [selectedAudiences, setSelectedAudiences] = useState<string[]>([]);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>('relevance');
@@ -78,10 +86,16 @@ export default function CategorySearch({
     return AUDIENCE_FILTER_CATEGORIES.includes(selectedCategory as any);
   }, [selectedCategory]);
 
+=======
+  const [sortBy, setSortBy] = useState<string>('relevance');
+  const [isGridView, setIsGridView] = useState<boolean>(true);
+
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   // Category selection handler
   const handleCategorySelect = (catId: string) => {
     setSelectedCategory(catId);
     setSelectedSubCategory('all');
+<<<<<<< HEAD
     setSelectedAudiences([]);
   };
 
@@ -91,6 +105,8 @@ export default function CategorySearch({
         ? prev.filter((a) => a !== audienceId)
         : [...prev, audienceId]
     );
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   };
 
   const currentCategoryObj = useMemo(() => {
@@ -103,9 +119,14 @@ export default function CategorySearch({
   const handleResetFilters = () => {
     setSelectedCategory('all');
     setSelectedSubCategory('all');
+<<<<<<< HEAD
     setSelectedAudiences([]);
     setSortBy('relevance');
     showToast('Category and audience filters reset.', 'info');
+=======
+    setSortBy('relevance');
+    showToast('Category reset to all.', 'info');
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   };
 
   // Filter products in memory
@@ -134,6 +155,7 @@ export default function CategorySearch({
           if (p.subCategory !== selectedSubCategory) return false;
         }
 
+<<<<<<< HEAD
         // Audience / Demographic Filter (only applied on designated wearable/personal categories)
         if (isAudienceFilterApplicable && selectedAudiences.length > 0) {
           const prodAudience = getProductAudience(p);
@@ -142,6 +164,8 @@ export default function CategorySearch({
           }
         }
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
         // Search Query Filter
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
@@ -161,6 +185,7 @@ export default function CategorySearch({
         if (sortBy === 'newest') return b.id - a.id; // simulation
         return 0; // relevance
       });
+<<<<<<< HEAD
   }, [products, selectedCategory, selectedSubCategory, isAudienceFilterApplicable, selectedAudiences, searchQuery, sortBy]);
 
   const renderAudienceFilterContent = () => (
@@ -239,6 +264,9 @@ export default function CategorySearch({
       </div>
     </div>
   );
+=======
+  }, [products, selectedCategory, selectedSubCategory, searchQuery, sortBy]);
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
   return (
     <div id="category-search-root" className="max-w-7xl mx-auto px-6 py-8">
@@ -269,6 +297,7 @@ export default function CategorySearch({
       </div>
 
       <div className="w-full">
+<<<<<<< HEAD
         <div className={`flex flex-col ${isAudienceFilterApplicable ? 'lg:flex-row gap-6 items-start' : ''}`}>
           {/* Desktop Left Sidebar: Only rendered for Fashion, Jewellery, Beauty */}
           {isAudienceFilterApplicable && (
@@ -285,6 +314,10 @@ export default function CategorySearch({
 
           {/* Main: Search Results / Sorting & Grid list */}
           <section className="flex-1 min-w-0 w-full space-y-6">
+=======
+        {/* Main: Search Results / Sorting & Grid list */}
+        <section className="w-full space-y-6">
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           {/* Fast Delivery Express Banner */}
           {is20MinEligibleCategory && (
             <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md ${
@@ -393,6 +426,7 @@ export default function CategorySearch({
 
             {/* Sorting and view option toggles */}
             <div className="flex flex-wrap items-center gap-3">
+<<<<<<< HEAD
               {/* Mobile "Audience Filter" trigger button (only visible on mobile if audience filter is applicable) */}
               {isAudienceFilterApplicable && (
                 <button
@@ -418,6 +452,8 @@ export default function CategorySearch({
                 </button>
               )}
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
               <div className="relative">
                 <select
                   id="sort-select-dropdown"
@@ -483,6 +519,7 @@ export default function CategorySearch({
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* Active Audience Filter Badges with Quick 'X' Remove */}
           {isAudienceFilterApplicable && selectedAudiences.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
@@ -520,11 +557,17 @@ export default function CategorySearch({
           {/* Empty Search Fallback */}
           {filteredProducts.length === 0 ? (
             <div id="empty-search-state" className={`p-12 sm:p-16 border border-dashed rounded-3xl text-center space-y-4 ${
+=======
+          {/* Empty Search Fallback */}
+          {filteredProducts.length === 0 ? (
+            <div id="empty-search-state" className={`p-16 border border-dashed rounded-3xl text-center space-y-4 ${
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
               isLightMode ? 'border-neutral-300 bg-neutral-50/50' : 'border-neutral-800 bg-neutral-900/30'
             }`}>
               <span className={`inline-flex p-5 rounded-full border ${
                 isLightMode ? 'bg-white border-neutral-200 text-[#F5A623]' : 'bg-neutral-950 border-neutral-800 text-[#F5A623]'
               }`}>
+<<<<<<< HEAD
                 <SlidersHorizontal className="w-8.5 h-8.5" />
               </span>
               <div className="space-y-1">
@@ -561,6 +604,23 @@ export default function CategorySearch({
                   Reset All Filters
                 </button>
               </div>
+=======
+                <SlidersHorizontal className="w-8.5 h-8.5 animate-spin" />
+              </span>
+              <div className="space-y-1">
+                <h3 className={`text-lg font-bold ${isLightMode ? 'text-neutral-900' : 'text-white'}`}>No Matching Luxury Items Found</h3>
+                <p className={`text-xs max-w-sm mx-auto leading-relaxed ${isLightMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                  We could not locate items meeting these parameters. Try clearing the search query or selecting another collection.
+                </p>
+              </div>
+              <button
+                id="reset-filters-empty"
+                onClick={handleResetFilters}
+                className="px-6 py-2.5 bg-gradient-to-r from-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#0A0F24] text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                Reset Catalog
+              </button>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
             </div>
           ) : (
             /* Products display based on layout view */
@@ -606,6 +666,7 @@ export default function CategorySearch({
                       }`}>
                         <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
                         <div className={`absolute top-2 right-2 z-10 ${isWishlisted ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover/thumb:opacity-100'} transition-opacity`}>
+<<<<<<< HEAD
                           <FavoriteButton
                             id={`wishlist-btn-thumb-${p.id}`}
                             isLiked={isWishlisted}
@@ -615,6 +676,30 @@ export default function CategorySearch({
                             }}
                             title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                           />
+=======
+                          <button
+                            id={`wishlist-btn-thumb-${p.id}`}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleWishlist(p);
+                            }}
+                            className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md active:scale-90 cursor-pointer product-action-btn flex items-center justify-center group/heartbtn ${
+                              isWishlisted
+                                ? 'bg-rose-500/20 dark:bg-rose-950/50 border border-rose-400/60 text-rose-500 shadow-[0_2px_12px_rgba(244,63,94,0.3)] hover:bg-rose-500/30'
+                                : 'bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/85 border border-white/70 dark:border-white/20 text-neutral-600 dark:text-white/80 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-300/70 dark:hover:border-rose-500/40 hover:shadow-[0_2px_12px_rgba(244,63,94,0.2)]'
+                            }`}
+                            title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                          >
+                            <Heart
+                              className={`w-3.5 h-3.5 transition-all duration-200 ${
+                                isWishlisted
+                                  ? 'fill-red-500 text-red-500 hover:text-red-600 animate-heart-pop'
+                                  : 'group-hover/heartbtn:scale-115 group-hover/heartbtn:text-rose-500 stroke-[2.2]'
+                              }`}
+                            />
+                          </button>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                         </div>
                       </div>
                       <div className="flex-1 flex flex-col justify-between py-1">
@@ -679,6 +764,7 @@ export default function CategorySearch({
               })}
             </div>
           )}
+<<<<<<< HEAD
           </section>
         </div>
       </div>
@@ -732,6 +818,10 @@ export default function CategorySearch({
           </div>
         </div>
       )}
+=======
+        </section>
+      </div>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     </div>
   );
 }

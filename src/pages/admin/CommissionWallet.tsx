@@ -18,13 +18,20 @@ import {
   Sparkles,
   History,
   CheckCircle2,
+<<<<<<< HEAD
   FileText,
   Download
+=======
+  FileText
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 } from "lucide-react";
 import GlassCloseButton from "../../components/GlassCloseButton";
 import { CommissionData } from "../adminTypes";
 import { adminApi } from "../adminApi";
+<<<<<<< HEAD
 import { exportDataToExcel, formatCommissionForExcel } from "../../utils/exportToExcel";
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 interface CommissionWalletProps {
   data: CommissionData | null;
@@ -434,6 +441,7 @@ export const CommissionWallet: React.FC<CommissionWalletProps> = ({
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
             </select>
+<<<<<<< HEAD
 
             {/* Export to Excel */}
             <button
@@ -453,6 +461,8 @@ export const CommissionWallet: React.FC<CommissionWalletProps> = ({
               <Download className="w-3.5 h-3.5" />
               <span>Export Excel</span>
             </button>
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           </div>
         </div>
 

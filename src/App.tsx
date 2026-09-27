@@ -197,8 +197,11 @@ export function buildRouteUrl(
 
 import { X, ShoppingCart, Star, Heart, ArrowRight } from 'lucide-react';
 import GlassCloseButton from './components/GlassCloseButton';
+<<<<<<< HEAD
 import FavoriteButton from './components/FavoriteButton';
 import ComparisonCorridorBar from './components/ComparisonCorridorBar';
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 const PageLoadingFallback = () => (
   <div className="w-full min-h-[50vh] flex flex-col items-center justify-center py-20 px-4">
@@ -210,6 +213,7 @@ const PageLoadingFallback = () => (
   </div>
 );
 
+<<<<<<< HEAD
 const SearchModalLoadingFallback = () => (
   <div
     id="search-experience-modal-overlay-loading"
@@ -244,6 +248,8 @@ const MessengerLoadingFallback = () => (
   </div>
 );
 
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 export default function App() {
 
   // Core Persistent State with database-backed session validation
@@ -439,6 +445,7 @@ export default function App() {
 
   // 2.1 Quick View & 2.5 Product Compare state layers
   const [comparedProducts, setComparedProducts] = useState<Product[]>([]);
+<<<<<<< HEAD
   const [isCompareBarDismissed, setIsCompareBarDismissed] = useState<boolean>(false);
   const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
@@ -459,6 +466,12 @@ export default function App() {
       setSelectedColor(initialColors[0]);
     }
   }, [quickViewProduct]);
+=======
+  const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string>('M');
+  const [selectedColor, setSelectedColor] = useState<string>('Standard Gold');
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
   // App Routing Visibility & URL Navigation state
   const [currentAdminUser, setCurrentAdminUser] = useState<{ _id?: string; name: string; email: string; role: string } | null>(null);
@@ -813,7 +826,10 @@ export default function App() {
         return;
       }
       setComparedProducts([...comparedProducts, product]);
+<<<<<<< HEAD
       setIsCompareBarDismissed(false);
+=======
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
       showToast(`Added "${product.name}" to compare matrix.`, 'success');
     }
   };
@@ -1047,7 +1063,11 @@ export default function App() {
 
       {/* Global Search Modal Experience */}
       {searchModalOpen && (
+<<<<<<< HEAD
         <Suspense fallback={<SearchModalLoadingFallback />}>
+=======
+        <Suspense fallback={null}>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           <SearchModal
             isOpen={searchModalOpen}
             onClose={() => setSearchModalOpen(false)}
@@ -1535,6 +1555,7 @@ export default function App() {
                 className="w-full h-full object-cover transition-transform duration-500 group-hover/quickimg:scale-105"
               />
               <div className="absolute top-3 right-3 z-10">
+<<<<<<< HEAD
                 <FavoriteButton
                   id={`wishlist-btn-quickview-${quickViewProduct.id}`}
                   isLiked={wishlist.some((p) => p.id === quickViewProduct.id)}
@@ -1544,6 +1565,30 @@ export default function App() {
                   }}
                   title={wishlist.some((p) => p.id === quickViewProduct.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
                 />
+=======
+                <button
+                  id={`wishlist-btn-quickview-${quickViewProduct.id}`}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleWishlist(quickViewProduct);
+                  }}
+                  className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md active:scale-90 cursor-pointer product-action-btn flex items-center justify-center group/heartbtn ${
+                    wishlist.some((p) => p.id === quickViewProduct.id)
+                      ? 'bg-rose-500/20 dark:bg-rose-950/50 border border-rose-400/60 text-rose-500 shadow-[0_2px_12px_rgba(244,63,94,0.3)] hover:bg-rose-500/30'
+                      : 'bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/85 border border-white/70 dark:border-white/20 text-neutral-600 dark:text-white/80 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-300/70 dark:hover:border-rose-500/40 hover:shadow-[0_2px_12px_rgba(244,63,94,0.2)]'
+                  }`}
+                  title={wishlist.some((p) => p.id === quickViewProduct.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                >
+                  <Heart
+                    className={`w-3.5 h-3.5 transition-all duration-200 ${
+                      wishlist.some((p) => p.id === quickViewProduct.id)
+                        ? 'fill-red-500 text-red-500 hover:text-red-600 animate-heart-pop'
+                        : 'group-hover/heartbtn:scale-115 group-hover/heartbtn:text-rose-500 stroke-[2.2]'
+                    }`}
+                  />
+                </button>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
               </div>
             </div>
 
@@ -1579,6 +1624,7 @@ export default function App() {
               </div>
 
               {/* Options selection */}
+<<<<<<< HEAD
               {(() => {
                 const productSizes = quickViewProduct.sizes && quickViewProduct.sizes.length > 0
                   ? quickViewProduct.sizes
@@ -1673,6 +1719,51 @@ export default function App() {
                   </div>
                 );
               })()}
+=======
+              <div className={`space-y-4 pt-4 border-t ${isLightMode ? 'border-[#EADFC9]' : 'border-[#162744]'}`}>
+                <div className="space-y-2">
+                  <p className="text-[10px] text-amber-700/80 dark:text-[#F5A623]/80 uppercase font-mono tracking-widest font-extrabold">Grade Choice</p>
+                  <div className="flex gap-2">
+                    {['S', 'M', 'L', 'XL'].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-3.5 py-1 text-xs font-bold rounded-lg border border-solid transition-all cursor-pointer ${
+                          selectedSize === size
+                            ? 'border-2 border-[#F5A623] bg-[#F5A623]/15 text-[#B48C28] dark:text-[#F5A623] font-black shadow-xs'
+                            : isLightMode
+                            ? 'border-[#EADFC9] bg-white text-gray-700 hover:border-amber-400'
+                            : 'border-[#162744] bg-[#0B1B32] text-slate-300 hover:border-[#F5A623]/40'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] text-amber-700/80 dark:text-[#F5A623]/80 uppercase font-mono tracking-widest font-extrabold">Surface Polish</p>
+                  <div className="flex gap-2">
+                    {['Standard Gold', 'Sterling Silver', 'Imperial Amber'].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg border border-solid transition-all cursor-pointer ${
+                          selectedColor === color
+                            ? 'border-2 border-[#F5A623] bg-[#F5A623]/15 text-[#B48C28] dark:text-[#F5A623] font-black shadow-xs'
+                            : isLightMode
+                            ? 'border-[#EADFC9] bg-white text-gray-700 hover:border-amber-400'
+                            : 'border-[#162744] bg-[#0B1B32] text-slate-300 hover:border-[#F5A623]/40'
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
               {/* Price block */}
               <div className={`pt-4 border-t ${isLightMode ? 'border-[#EADFC9]' : 'border-[#162744]'}`}>
@@ -1725,6 +1816,7 @@ export default function App() {
       )}
 
       {/* 2.5 Compare Sticky Bottom Drawer Panel */}
+<<<<<<< HEAD
       {comparedProducts.length > 0 && !isCompareBarDismissed && (
         <ComparisonCorridorBar
           selectedItems={comparedProducts}
@@ -1740,6 +1832,45 @@ export default function App() {
           }}
           onCompare={() => setShowCompareModal(true)}
         />
+=======
+      {comparedProducts.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-neutral-950/95 border-t-2 border-solid border-[#D1D1D1]/40 backdrop-blur-lg p-4 z-40 shadow-2xl flex items-center justify-between gap-4 max-w-7xl mx-auto rounded-t-3xl animate-page-in">
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block">
+              <p className="text-xs font-black text-white uppercase tracking-wider">Comparison Corridor</p>
+              <p className="text-[10px] text-neutral-500">{comparedProducts.length} premium creations selected</p>
+            </div>
+            <div className="flex gap-2">
+              {comparedProducts.map((p, pIdx) => (
+                <div key={`cmp-bar-${p.id}-${pIdx}`} className="relative group w-12 h-12 rounded-lg overflow-hidden border border-solid border-neutral-800">
+                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <button
+                    onClick={() => setComparedProducts(comparedProducts.filter((item) => item.id !== p.id))}
+                    className="absolute -top-1 -right-1 bg-neutral-900 border border-solid border-[#D1D1D1]/30 p-0.5 rounded-full text-neutral-400 hover:text-[#D1D1D1] shadow transition-colors cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setComparedProducts([])}
+              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-[#D1D1D1] rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              Purge Matrix
+            </button>
+            <button
+              onClick={() => setShowCompareModal(true)}
+              className="px-5 py-2 bg-gradient-to-r from-[#ffffff] to-[#D1D1D1] text-black font-black uppercase rounded-xl text-[10px] tracking-wider transition-all shadow-lg cursor-pointer"
+            >
+              Compare Specs ({comparedProducts.length})
+            </button>
+          </div>
+        </div>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
       )}
 
       {/* 2.5 Detailed Attribute Compare Specification Modal */}
@@ -1839,7 +1970,11 @@ export default function App() {
 
       {/* Floating Messenger Side Widget/Popup */}
       {isChatOpen && (
+<<<<<<< HEAD
         <Suspense fallback={<MessengerLoadingFallback />}>
+=======
+        <Suspense fallback={null}>
+>>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           <div id="chat-widget-container" className="fixed bottom-6 right-6 z-[90] w-[380px] max-w-[calc(100vw-32px)] h-[min(580px,calc(100vh-100px))] rounded-3xl overflow-hidden shadow-2xl border-2 border-solid border-[#D1D1D1]/40 flex flex-col bg-white animate-slide-up animate-page-in">
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
               <Messenger
