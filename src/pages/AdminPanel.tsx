@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 import React, { useEffect, useState, FormEvent, useRef } from "react";
-=======
-import React, { useEffect, useState, FormEvent } from "react";
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
+import { createPortal } from "react-dom";
 import "../styles/AdminPanel.css";
 import { adminApi } from "./adminApi";
 import { 
@@ -22,6 +19,12 @@ import {
 } from "./adminTypes";
 import BannerManagement from "./admin/BannerManagement";
 import CommissionWallet from "./admin/CommissionWallet";
+import FlashSaleManagement from "./admin/FlashSaleManagement";
+import AdminCategoryManager from "../components/AdminCategoryManager";
+import DatabaseHubSection from "../components/admin/DatabaseHubSection";
+import AdminMinisterSection from "../components/admin/AdminMinisterSection";
+import CustomerCareModule from "../components/admin/customerCare/CustomerCareModule";
+import { DynamicCategory } from "../types";
 import Logo from "../components/Logo";
 import GlassIconButton from "../components/GlassIconButton";
 import { CATEGORIES } from "../data/mockData";
@@ -64,9 +67,11 @@ import {
   Tag,
   Briefcase,
   Layers,
+  LayoutGrid,
   ArrowRight,
   Shield,
   Crown,
+  UserCheck,
   Lock,
   Eye,
   Key,
@@ -79,12 +84,13 @@ import {
   CreditCard,
   Building,
   FileCheck,
-<<<<<<< HEAD
   Landmark,
   Upload,
   Camera,
   ArrowLeft,
-  Download
+  Download,
+  Database,
+  Headphones
 } from "lucide-react";
 import {
   exportDataToExcel,
@@ -98,12 +104,8 @@ import {
   formatBannersForExcel,
   formatAdminUsersForExcel
 } from "../utils/exportToExcel";
-=======
-  Landmark
-} from "lucide-react";
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
-export type Section = "dashboard" | "products" | "orders" | "sellers" | "customers" | "banners" | "reports" | "adminUsers" | "activity" | "commission";
+export type Section = "dashboard" | "products" | "orders" | "sellers" | "customers" | "banners" | "categories" | "reports" | "adminUsers" | "activity" | "commission" | "flashSale" | "databaseHub" | "customerCare";
 
 const SEAL_LABEL: Record<string, string> = {
   pending: "Pending Approval",
@@ -168,7 +170,7 @@ export default function AdminPanel({
         }
       : null
   );
-  const [loginEmail, setLoginEmail] = useState(user?.email || "developer.alikend@gmail.com");
+  const [loginEmail, setLoginEmail] = useState(user?.email || "");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
@@ -186,6 +188,7 @@ export default function AdminPanel({
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [categoriesList, setCategoriesList] = useState<DynamicCategory[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEvent[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminAccount[]>([]);
   const [salesReport, setSalesReport] = useState<SalesReport | null>(null);
@@ -229,14 +232,29 @@ export default function AdminPanel({
   const [confirmAdminEmailInput, setConfirmAdminEmailInput] = useState("");
   const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
 
+  // Self Password Change State
+  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Super Admin Password Reset for Admin Account State
+  const [resetPasswordAdmin, setResetPasswordAdmin] = useState<AdminAccount | null>(null);
+  const [resetPasswordInput, setResetPasswordInput] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState("");
+
   const isSuperAdmin = Boolean(
-    currentAdmin &&
-    (currentAdmin.role === "superadmin" || currentAdmin.email?.toLowerCase().trim() === "developer.alikend@gmail.com" || currentAdmin.email?.toLowerCase().trim() === "noyondey176@gmail.com")
+    currentAdmin && currentAdmin.role === "superadmin"
   );
 
-  // Strictly redirect away from superadmin-only sections if logged in as regular admin
+  // Strictly redirect away from superadmin-only sections (reports and commission) if logged in as regular admin
   useEffect(() => {
-    if (!isSuperAdmin && (section === "commission" || section === "reports" || section === "adminUsers")) {
+    if (!isSuperAdmin && (section === "commission" || section === "reports")) {
       setSection("dashboard");
     }
   }, [isSuperAdmin, section]);
@@ -323,7 +341,7 @@ export default function AdminPanel({
     setLoading(true);
     setError("");
     try {
-      const [p, o, s, c, st, logs, bList] = await Promise.all([
+      const [p, o, s, c, st, logs, bList, catList] = await Promise.all([
         adminApi.getProducts().catch(() => []),
         adminApi.getOrders().catch(() => []),
         adminApi.getSellers().catch(() => []),
@@ -331,25 +349,29 @@ export default function AdminPanel({
         adminApi.getStats().catch(() => null),
         adminApi.getActivityLogs().catch(() => []),
         adminApi.getBanners().catch(() => []),
+        adminApi.getCategories(true).catch(() => []),
       ]);
       setProducts(p || []);
       setOrders(o || []);
-      setSellers(s || []);
+      setSellers(Array.isArray(s) ? s : ((s as any)?.sellers || []));
       setCustomers(c || []);
       setActivityLogs(logs || []);
       setBanners(bList || []);
+      setCategoriesList(Array.isArray(catList) ? catList : ((catList as any)?.categories || []));
       if (st) setStats(st);
+
+      // Always load Administrator Accounts directory so all logged-in administrators can view Admin & Super Admin rosters
+      try {
+        const adminsList = await adminApi.getAdminUsers();
+        setAdminUsers(Array.isArray(adminsList) ? adminsList : ((adminsList as any)?.admins || []));
+      } catch (e) {
+        console.warn("Could not load admin users list:", e);
+      }
 
       // Load SuperAdmin exclusive datasets ONLY if role is superadmin
       const effectiveAdmin = activeAdmin !== undefined ? activeAdmin : currentAdmin;
       const isSuper = effectiveAdmin?.role === "superadmin" || effectiveAdmin?.email?.toLowerCase() === "developer.alikend@gmail.com" || effectiveAdmin?.email?.toLowerCase() === "noyondey176@gmail.com";
       if (isSuper) {
-        try {
-          const adminsList = await adminApi.getAdminUsers();
-          setAdminUsers(adminsList || []);
-        } catch (e) {
-          console.warn("Could not load admin users list:", e);
-        }
         try {
           const rep = await adminApi.getSalesReport();
           setSalesReport(rep);
@@ -363,8 +385,7 @@ export default function AdminPanel({
           console.warn("Could not load commission data:", e);
         }
       } else {
-        // Clear any superadmin data for non-superadmin
-        setAdminUsers([]);
+        // Clear reports and commission for non-superadmin
         setSalesReport(null);
         setCommissionData(null);
       }
@@ -399,21 +420,23 @@ export default function AdminPanel({
     }
   }
 
-  // Load superadmin items when switching tabs if needed, and kick non-superadmin back to dashboard
+  // Load superadmin items when switching tabs if needed, and kick non-superadmin back to dashboard for reports and commission
   useEffect(() => {
-    if (loggedIn && isSuperAdmin) {
+    if (loggedIn) {
       if (section === "adminUsers" && adminUsers.length === 0) {
         adminApi.getAdminUsers().then(res => setAdminUsers(res || [])).catch(() => {});
       }
-      if (section === "reports" && !salesReport) {
-        adminApi.getSalesReport().then(res => setSalesReport(res)).catch(() => {});
-      }
-      if (section === "commission") {
-        loadCommission();
-      }
-    } else if (loggedIn && !isSuperAdmin) {
-      if (section === "adminUsers" || section === "reports" || section === "commission") {
-        setSection("dashboard");
+      if (isSuperAdmin) {
+        if (section === "reports" && !salesReport) {
+          adminApi.getSalesReport().then(res => setSalesReport(res)).catch(() => {});
+        }
+        if (section === "commission") {
+          loadCommission();
+        }
+      } else {
+        if (section === "reports" || section === "commission") {
+          setSection("dashboard");
+        }
       }
     }
   }, [section, loggedIn, isSuperAdmin]);
@@ -458,10 +481,16 @@ export default function AdminPanel({
     try {
       let updatedList: Product[] = [];
       if (editingProduct) {
-        const updated = await adminApi.updateProduct(editingProduct._id, data);
-        updatedList = products.map((p) => (p._id === updated._id ? updated : p));
+        const targetId = editingProduct._id || String(editingProduct.id);
+        const updated = await adminApi.updateProduct(targetId, data);
+        const resolvedUpdated = updated || { ...editingProduct, ...data, _id: targetId };
+        updatedList = products.map((p) => {
+          const pId = p._id || String(p.id);
+          const uId = resolvedUpdated._id || String(resolvedUpdated.id);
+          return (pId === targetId || pId === uId) ? { ...p, ...resolvedUpdated } : p;
+        });
         setProducts(updatedList);
-        flashSuccess(`Product "${updated.name}" updated successfully.`);
+        flashSuccess(`Product "${resolvedUpdated.name}" updated successfully.`);
       } else {
         const created = await adminApi.createProduct(data);
         updatedList = [created, ...products];
@@ -490,7 +519,10 @@ export default function AdminPanel({
     setIsDeletingProduct(true);
     try {
       await adminApi.deleteProduct(productToDelete.id);
-      const updatedList = products.filter((p) => (p._id && p._id !== productToDelete.id) && String(p.id) !== productToDelete.id);
+      const updatedList = products.filter((p) => {
+        const pId = p._id || String(p.id);
+        return pId !== productToDelete.id;
+      });
       setProducts(updatedList);
       flashSuccess(`Product "${productToDelete.name}" permanently deleted from catalog.`);
       if (onProductsChange) {
@@ -599,6 +631,10 @@ export default function AdminPanel({
       alert("Email and password are required.");
       return;
     }
+    if (newAdminPassword.trim().length < 10) {
+      alert("Password must be at least 10 characters long.");
+      return;
+    }
     setCreatingAdmin(true);
     try {
       const created = await adminApi.createAdminUser({
@@ -653,6 +689,63 @@ export default function AdminPanel({
       alert(err.message || "Failed to delete admin account");
     } finally {
       setIsDeletingAdmin(false);
+    }
+  }
+
+  // --- Password Management Handlers ---
+  async function handleAdminChangePassword(e: FormEvent) {
+    e.preventDefault();
+    setChangePasswordError("");
+    if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput) {
+      setChangePasswordError("All password fields are required.");
+      return;
+    }
+    if (newPasswordInput.length < 10) {
+      setChangePasswordError("New password must be at least 10 characters.");
+      return;
+    }
+    if (newPasswordInput !== confirmPasswordInput) {
+      setChangePasswordError("New password and confirm password do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await adminApi.changePassword({
+        currentPassword: currentPasswordInput,
+        newPassword: newPasswordInput,
+      });
+      flashSuccess(res?.message || "Your administrator password has been updated successfully!");
+      setChangePasswordModalOpen(false);
+      setCurrentPasswordInput("");
+      setNewPasswordInput("");
+      setConfirmPasswordInput("");
+    } catch (err: any) {
+      setChangePasswordError(err?.message || "Failed to change password. Please check your current password.");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  }
+
+  async function handleSuperAdminResetPassword(e: FormEvent) {
+    e.preventDefault();
+    if (!resetPasswordAdmin) return;
+    setResetPasswordError("");
+    if (!resetPasswordInput || resetPasswordInput.trim().length < 10) {
+      setResetPasswordError("New password must be at least 10 characters long.");
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const res = await adminApi.resetAdminPassword(resetPasswordAdmin._id, resetPasswordInput.trim());
+      flashSuccess(res?.message || `Password reset successfully for ${resetPasswordAdmin.email}`);
+      setResetPasswordAdmin(null);
+      setResetPasswordInput("");
+    } catch (err: any) {
+      setResetPasswordError(err?.message || "Failed to reset administrator password.");
+    } finally {
+      setIsResettingPassword(false);
     }
   }
 
@@ -778,12 +871,14 @@ export default function AdminPanel({
   }
 
   // Filter computations
-  const categories = [...new Set(products.map((p) => p.category))];
+  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const filteredProducts = products.filter((p) => {
-    const matchSearch = !prodSearch || 
-      p.name.toLowerCase().includes(prodSearch.toLowerCase()) || 
-      p.category.toLowerCase().includes(prodSearch.toLowerCase()) ||
-      (p.brand && p.brand.toLowerCase().includes(prodSearch.toLowerCase()));
+    const q = (prodSearch || "").trim().toLowerCase();
+    const matchSearch = !q || 
+      (p.name || "").toLowerCase().includes(q) || 
+      (p.category || "").toLowerCase().includes(q) ||
+      (p.brand && (p.brand || "").toLowerCase().includes(q)) ||
+      (p.description && (p.description || "").toLowerCase().includes(q));
     
     const matchCat = !prodCategory || p.category === prodCategory;
 
@@ -797,14 +892,14 @@ export default function AdminPanel({
     return matchSearch && matchCat && matchFlash;
   });
 
-  const filteredOrders = orders.filter(
-    (o) =>
-      (!orderSearch ||
-        o.orderNumber.toLowerCase().includes(orderSearch.toLowerCase()) ||
-        o.memberName.toLowerCase().includes(orderSearch.toLowerCase()) ||
-        (o.memberEmail && o.memberEmail.toLowerCase().includes(orderSearch.toLowerCase()))) &&
-      (!orderStatusFilter || o.status === orderStatusFilter)
-  );
+  const filteredOrders = orders.filter((o) => {
+    const q = (orderSearch || "").trim().toLowerCase();
+    const matchSearch = !q ||
+      (o.orderNumber || "").toLowerCase().includes(q) ||
+      (o.memberName || "").toLowerCase().includes(q) ||
+      (o.memberEmail && (o.memberEmail || "").toLowerCase().includes(q));
+    return matchSearch && (!orderStatusFilter || o.status === orderStatusFilter);
+  });
 
   const filteredSellers = sellers.filter((s) => {
     const q = sellerSearch.trim().toLowerCase();
@@ -822,14 +917,21 @@ export default function AdminPanel({
     return matchSearch && matchStatus;
   });
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      (!custSearch ||
-        c.name.toLowerCase().includes(custSearch.toLowerCase()) ||
-        c.email.toLowerCase().includes(custSearch.toLowerCase()) ||
-        (c.phone && c.phone.toLowerCase().includes(custSearch.toLowerCase()))) &&
-      (!custTierFilter || c.tier === custTierFilter)
-  );
+  const filteredCustomers = customers.filter((c) => {
+    const isAutoVip = (c.ordersCount || 0) > 10;
+    const isVip = c.tier === "VIP" || c.tier === "Platinum" || isAutoVip;
+    const tier = isVip ? "VIP" : "Normal";
+
+    const matchesSearch =
+      !custSearch ||
+      c.name.toLowerCase().includes(custSearch.toLowerCase()) ||
+      c.email.toLowerCase().includes(custSearch.toLowerCase()) ||
+      (c.phone && c.phone.toLowerCase().includes(custSearch.toLowerCase()));
+
+    const matchesTier = !custTierFilter || tier === custTierFilter;
+
+    return matchesSearch && matchesTier;
+  });
 
   const filteredActivityLogs = activityLogs.filter((log) => {
     if (activityFilter === "registration" && log.eventType !== "Registration") return false;
@@ -848,7 +950,6 @@ export default function AdminPanel({
     return true;
   });
 
-<<<<<<< HEAD
   const handleExportCurrentSection = () => {
     switch (section) {
       case "orders": {
@@ -949,11 +1050,11 @@ export default function AdminPanel({
             },
             {
               sheetName: "Recent Orders",
-              data: formatOrdersForExcel(orders.slice(0, 50)),
+              data: formatOrdersForExcel((orders || []).slice(0, 50)),
             },
             {
               sheetName: "Products Catalog",
-              data: formatProductsForExcel(products.slice(0, 50)),
+              data: formatProductsForExcel((products || []).slice(0, 50)),
             },
           ],
           "Dashboard_Executive_Report"
@@ -963,8 +1064,6 @@ export default function AdminPanel({
     }
   };
 
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   return (
     <div className="ap-root">
       {/* Top Role Indicator Banner */}
@@ -1000,14 +1099,25 @@ export default function AdminPanel({
         />
 
         {/* Sidebar */}
-        <aside className={`ap-sidebar ${mobileSidebarOpen ? "open" : ""}`}>
-          <div className="ap-brand">
-            <div className="ap-brand-row items-center gap-2">
-              <Logo size="sm" isLightMode={false} />
+        <aside className={`ap-sidebar ${mobileSidebarOpen ? "open mobile-open" : ""}`}>
+          <div className="ap-brand flex items-center justify-between">
+            <div>
+              <div className="ap-brand-row items-center gap-2">
+                <Logo size="sm" isLightMode={false} />
+              </div>
+              <div className="ap-brand-sub">
+                {isSuperAdmin ? "Super Administrator" : "Operations Admin"}
+              </div>
             </div>
-            <div className="ap-brand-sub">
-              {isSuperAdmin ? "Super Administrator" : "Operations Admin"}
-            </div>
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="Close menu"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           <nav className="flex-1 space-y-1">
@@ -1060,6 +1170,24 @@ export default function AdminPanel({
               <span className="ml-auto text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded font-mono font-bold">{banners.length}</span>
             </div>
 
+            <div
+              className={`ap-nav-item ${section === "categories" ? "active" : ""}`}
+              onClick={() => { setSection("categories"); setMobileSidebarOpen(false); }}
+            >
+              <LayoutGrid className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-100 font-semibold">Categories</span>
+              <span className="ml-auto text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold">{categoriesList.length}</span>
+            </div>
+
+            <div
+              className={`ap-nav-item ${section === "flashSale" ? "active" : ""}`}
+              onClick={() => { setSection("flashSale"); setMobileSidebarOpen(false); }}
+            >
+              <Flame className="w-4 h-4 text-orange-400" />
+              <span className="text-orange-100 font-semibold">Flash Premium Hours</span>
+              <span className="ml-auto text-[9px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded font-mono font-bold">LIVE</span>
+            </div>
+
             {/* SUPER ADMIN EXCLUSIVE: Platform Commission & Wallet */}
             {isSuperAdmin && (
               <div
@@ -1086,17 +1214,19 @@ export default function AdminPanel({
               </div>
             )}
 
-            {/* SUPER ADMIN EXCLUSIVE: Admin Accounts */}
-            {isSuperAdmin && (
-              <div
-                className={`ap-nav-item ${section === "adminUsers" ? "active" : ""}`}
-                onClick={() => { setSection("adminUsers"); setMobileSidebarOpen(false); }}
-              >
-                <Key className="w-4 h-4 text-amber-400" />
-                <span className="text-amber-200 font-semibold">Admin Accounts</span>
-                <span className="ml-auto text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold">SUPER</span>
-              </div>
-            )}
+            {/* Administrator Accounts / Ministry Directorate */}
+            <div
+              className={`ap-nav-item ${section === "adminUsers" ? "active" : ""}`}
+              onClick={() => { setSection("adminUsers"); setMobileSidebarOpen(false); }}
+            >
+              <Crown className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-200 font-semibold">এডমিন মিনিস্টার (Admin Minister)</span>
+              {isSuperAdmin ? (
+                <span className="ml-auto text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold">MINISTER</span>
+              ) : (
+                <span className="ml-auto text-[9px] bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded font-mono font-bold">DIRECTORY</span>
+              )}
+            </div>
 
             <div
               className={`ap-nav-item ${section === "activity" ? "active" : ""}`}
@@ -1104,6 +1234,30 @@ export default function AdminPanel({
             >
               <Activity className="w-4 h-4" />
               <span>Activity Logs</span>
+            </div>
+
+            {/* Customer Care & Central Hotline Management */}
+            <div
+              className={`ap-nav-item ${section === "customerCare" ? "active" : ""}`}
+              onClick={() => { setSection("customerCare"); setMobileSidebarOpen(false); }}
+            >
+              <Headphones className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-100 font-semibold">কাস্টমার কেয়ার ও হটলাইন</span>
+              <span className="ml-auto text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                CARE & HOTLINE
+              </span>
+            </div>
+
+            {/* Database & Cloud Services Hub: Multi-DB, Live Storage, Costs, Migration & Backup */}
+            <div
+              className={`ap-nav-item ${section === "databaseHub" ? "active" : ""}`}
+              onClick={() => { setSection("databaseHub"); setMobileSidebarOpen(false); }}
+            >
+              <Database className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-100 font-semibold">Database & Cloud Hub</span>
+              <span className="ml-auto text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                6 CLOUD
+              </span>
             </div>
           </nav>
 
@@ -1131,67 +1285,83 @@ export default function AdminPanel({
           <header className="ap-topbar">
             <div className="flex items-center gap-3">
               <button
-                className="lg:hidden p-2 rounded-lg bg-neutral-100 text-neutral-800"
+                type="button"
+                className="lg:hidden p-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer flex items-center justify-center shadow-xs border border-neutral-200 dark:border-neutral-700"
                 onClick={() => setMobileSidebarOpen(true)}
+                title="Open Navigation Menu"
+                aria-label="Open Navigation Menu"
               >
                 <Menu className="w-5 h-5" />
               </button>
               <div>
                 <h1 className="ap-page-title capitalize">
-                  {section === "banners" ? "Hero Carousel Banners" : section === "adminUsers" ? "Admin Accounts Management" : section === "reports" ? "Sales & Revenue Analytics" : section === "commission" ? "Platform Earnings & Commission Wallet" : section}
+                  {section === "banners" ? "Hero Carousel Banners" : section === "flashSale" ? "Flash Premium Hours & Countdown" : section === "adminUsers" ? "এডমিন মিনিস্টার (Admin Minister)" : section === "reports" ? "Sales & Revenue Analytics" : section === "commission" ? "Platform Earnings & Commission Wallet" : section}
                 </h1>
                 <p className="ap-page-sub">
-                  {isSuperAdmin
+                  {section === "adminUsers"
+                    ? "Sovereign Administration Directorate · কেন্দ্রীয় প্রশাসনিক মন্ত্রণালয় ও পরিচালনা"
+                    : isSuperAdmin
                     ? "Root Administrator Console · alikendshop database"
                     : "Operations Administrator Console · Product & Order Management"}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-<<<<<<< HEAD
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 max-w-full">
+              {/* Change Password Button */}
+              <button
+                type="button"
+                id="admin-change-pass-btn"
+                onClick={() => {
+                  setChangePasswordModalOpen(true);
+                  setChangePasswordError("");
+                  setCurrentPasswordInput("");
+                  setNewPasswordInput("");
+                  setConfirmPasswordInput("");
+                }}
+                className="h-9 px-3 bg-white hover:bg-slate-50 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-neutral-700 shadow-xs transition-all hover:scale-[1.02] active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0"
+                title="Change your admin account password"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span className="hidden sm:inline">Change Password</span>
+              </button>
+
               {/* Dynamic Excel Export Button */}
               <button
                 type="button"
                 id="admin-export-excel-btn"
                 onClick={handleExportCurrentSection}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer border border-emerald-500"
+                className="h-9 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl border border-emerald-500 shadow-xs shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0"
                 title={`Export ${section} data to Excel (.xlsx)`}
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export to Excel</span>
+                <Download className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">Export to Excel</span>
               </button>
 
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
+              {/* Sync DB Button */}
               <button
+                type="button"
                 onClick={() => loadAll()}
                 disabled={loading}
-                className="ap-btn ap-btn-ghost ap-btn-sm gap-1.5"
+                className="h-9 px-3 bg-white hover:bg-slate-50 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-neutral-700 shadow-xs transition-all hover:scale-[1.02] active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0 disabled:opacity-50"
                 title="Refresh database records"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${loading ? "animate-spin" : ""}`} />
                 <span className="hidden sm:inline">Sync DB</span>
               </button>
+
+              {/* Add Product Button */}
               {section === "products" && (
                 <button
+                  type="button"
                   onClick={() => {
                     setEditingProduct(null);
                     setModalOpen(true);
                   }}
-                  className="ap-btn ap-btn-primary ap-btn-sm gap-1.5"
+                  className="h-9 px-3.5 bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:from-pink-500 hover:to-amber-500 text-white text-xs font-bold rounded-xl border border-rose-500/30 shadow-xs shadow-rose-600/25 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-4 h-4 shrink-0" />
                   <span>Add Product</span>
-                </button>
-              )}
-              {section === "adminUsers" && isSuperAdmin && (
-                <button
-                  onClick={() => setCreateAdminModalOpen(true)}
-                  className="ap-btn ap-btn-primary ap-btn-sm gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Create Admin</span>
                 </button>
               )}
             </div>
@@ -1228,63 +1398,207 @@ export default function AdminPanel({
             {section === "dashboard" && (
               <div className="space-y-6">
                 <div className="ap-tag-row">
-                  <div className="ap-vip-card">
-                    <div className="ap-tag-label">Active Products</div>
+                  <div 
+                    className="ap-vip-card cursor-pointer hover:scale-[1.02] active:scale-[0.99] transition-all group shadow-md"
+                    onClick={() => {
+                      setSection("products");
+                      setProdSearch("");
+                      setProdCategory("");
+                      setProdFlashFilter("all");
+                    }}
+                    title="Click to view and manage all products"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="ap-tag-label">Active Products</div>
+                      <ArrowRight className="w-3.5 h-3.5 text-amber-300 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                    </div>
                     <div className="ap-tag-value">{products.length}</div>
                     <div className="ap-tag-delta">{products.filter(p => p.badge === 'SALE' || p.isFlashSale).length} Flash Sale Products</div>
                   </div>
 
-                  <div className="ap-vip-card">
-                    <div className="ap-tag-label">Orders Count</div>
+                  <div 
+                    className="ap-vip-card cursor-pointer hover:scale-[1.02] active:scale-[0.99] transition-all group shadow-md"
+                    onClick={() => {
+                      setSection("orders");
+                      setOrderSearch("");
+                      setOrderStatusFilter("");
+                    }}
+                    title="Click to view and manage all orders"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="ap-tag-label">Orders Count</div>
+                      <ArrowRight className="w-3.5 h-3.5 text-amber-300 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                    </div>
                     <div className="ap-tag-value">{orders.length}</div>
                     <div className="ap-tag-delta">{orders.filter(o => o.status === 'pending').length} Pending Fulfillment</div>
                   </div>
 
-                  <div className="ap-vip-card">
-                    <div className="ap-tag-label">Verified Customers</div>
+                  <div 
+                    className="ap-vip-card cursor-pointer hover:scale-[1.02] active:scale-[0.99] transition-all group shadow-md"
+                    onClick={() => {
+                      setSection("customers");
+                      setCustSearch("");
+                      setCustTierFilter("");
+                    }}
+                    title="Click to view all customers"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="ap-tag-label">Verified Customers</div>
+                      <ArrowRight className="w-3.5 h-3.5 text-amber-300 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                    </div>
                     <div className="ap-tag-value">{customers.length}</div>
                     <div className="ap-tag-delta">{customers.filter(c => c.tier === 'Platinum').length} Platinum VIP Members</div>
                   </div>
 
-                  <div className="ap-vip-card">
-                    <div className="ap-tag-label">Active Sellers</div>
+                  <div 
+                    className="ap-vip-card cursor-pointer hover:scale-[1.02] active:scale-[0.99] transition-all group shadow-md"
+                    onClick={() => {
+                      setSection("sellers");
+                      setSellerSearch("");
+                      setSellerStatusFilter("");
+                    }}
+                    title="Click to view all sellers"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="ap-tag-label">Active Sellers</div>
+                      <ArrowRight className="w-3.5 h-3.5 text-amber-300 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                    </div>
                     <div className="ap-tag-value">{sellers.length}</div>
                     <div className="ap-tag-delta">{sellers.filter(s => s.status === 'approved').length} Approved Ateliers</div>
                   </div>
                 </div>
 
                 {/* Quick Shortcuts */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="ap-card p-5">
-                    <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
-                      <Package className="w-4 h-4 text-purple-600" />
-                      <span>Product Management & Flash Hours</span>
-                    </h3>
-                    <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
-                      Configure product names, brands, prices, list MRPs, discount percentages, stock indicators, and countdown timers. Changes appear live immediately across the storefront.
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                  <div className="ap-card p-5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900 mb-2.5 flex items-center gap-2">
+                        <Package className="w-4 h-4 text-purple-600 shrink-0" />
+                        <span>Products & Flash</span>
+                      </h3>
+                      <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
+                        Configure product pricing, MRPs, flash timers, and live stock indicators.
+                      </p>
+                    </div>
                     <button
                       onClick={() => setSection("products")}
-                      className="ap-btn ap-btn-ghost ap-btn-sm text-purple-700 border-purple-200 hover:bg-purple-50 gap-1"
+                      className="ap-btn ap-btn-ghost ap-btn-sm text-purple-700 border-purple-200 hover:bg-purple-50 gap-1 w-full justify-between"
                     >
-                      <span>Manage Products Catalog</span>
+                      <span>Manage Products</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  <div className="ap-card p-5">
-                    <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
-                      <ShoppingBag className="w-4 h-4 text-emerald-600" />
-                      <span>Order Processing Queue</span>
-                    </h3>
-                    <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
-                      Track and transition member orders through Pending, Processing, Shipped, and Delivered stages with real-time updates.
-                    </p>
+                  <div className="ap-card p-5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900 mb-2.5 flex items-center gap-2">
+                        <ShoppingBag className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Orders Queue</span>
+                      </h3>
+                      <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
+                        Transition member orders across Pending, Processing, Shipped, and Delivered.
+                      </p>
+                    </div>
                     <button
                       onClick={() => setSection("orders")}
-                      className="ap-btn ap-btn-ghost ap-btn-sm text-emerald-700 border-emerald-200 hover:bg-emerald-50 gap-1"
+                      className="ap-btn ap-btn-ghost ap-btn-sm text-emerald-700 border-emerald-200 hover:bg-emerald-50 gap-1 w-full justify-between"
                     >
-                      <span>View Orders Queue</span>
+                      <span>View Orders</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="ap-card p-5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900 mb-2.5 flex items-center gap-2">
+                        <LayoutGrid className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Store Categories</span>
+                      </h3>
+                      <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
+                        Reorder, add, or toggle category carousels with real-time storefront preview.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSection("categories")}
+                      className="ap-btn ap-btn-ghost ap-btn-sm text-amber-700 border-amber-200 hover:bg-amber-50 gap-1 w-full justify-between"
+                    >
+                      <span>Manage Categories</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="ap-card p-5 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900 mb-2.5 flex items-center gap-2">
+                        <Store className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>Seller Ateliers</span>
+                      </h3>
+                      <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
+                        Review seller applications, approve boutiques, and audit vendor payouts.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSection("sellers")}
+                      className="ap-btn ap-btn-ghost ap-btn-sm text-blue-700 border-blue-200 hover:bg-blue-50 gap-1 w-full justify-between"
+                    >
+                      <span>Manage Sellers</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="ap-card p-5 flex flex-col justify-between border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-500/5 to-transparent">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900 mb-2.5 flex items-center gap-2">
+                        <Database className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Database & Cloud Hub</span>
+                      </h3>
+                      <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
+                        Control Firebase, MongoDB, Supabase, Cloudinary, live storage, and cross-DB backups.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSection("databaseHub")}
+                      className="ap-btn ap-btn-ghost ap-btn-sm text-amber-800 border-amber-300 hover:bg-amber-100/60 gap-1 w-full justify-between font-bold"
+                    >
+                      <span>Manage Cloud DBs</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="ap-card p-5 flex flex-col justify-between border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-500/5 to-transparent">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-2.5 flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-purple-600 shrink-0" />
+                        <span>এডমিন মিনিস্টার</span>
+                      </h3>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4 leading-relaxed">
+                        হেড এডমিন, মেইন এডমিন, সাব এডমিন ও ইউজার এডমিনসহ মন্ত্রণালয় পরিচালনা ও পদায়ন।
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSection("adminUsers")}
+                      className="ap-btn ap-btn-ghost ap-btn-sm text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 hover:bg-purple-100/60 gap-1 w-full justify-between font-bold"
+                    >
+                      <span>এডমিন মিনিস্টার খুলুন</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="ap-card p-5 flex flex-col justify-between border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-500/10 to-transparent">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-2.5 flex items-center gap-2">
+                        <Headphones className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span>কাস্টমার কেয়ার ও সেন্ট্রাল হটলাইন</span>
+                      </h3>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4 leading-relaxed">
+                        সেন্ট্রাল হটলাইন ডিরেক্টরি, সাপোর্ট টিকিট ট্র্যাকিং, কাস্টমার হিস্ট্রি ও সার্বক্ষণিক কনসিয়ার্জ সেবা।
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSection("customerCare")}
+                      className="ap-btn ap-btn-ghost ap-btn-sm text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100/60 gap-1 w-full justify-between font-bold"
+                    >
+                      <span>Customer Care প্যানেল খুলুন</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1299,14 +1613,24 @@ export default function AdminPanel({
                 <div className="ap-toolbar-row">
                   <div className="flex flex-wrap gap-2 flex-1">
                     <div className="relative min-w-[200px] flex-1">
+                      <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                       <input
                         type="text"
                         placeholder="Search products by title, brand, or category..."
                         value={prodSearch}
                         onChange={(e) => setProdSearch(e.target.value)}
-                        className="ap-input pl-8"
+                        className="ap-input ap-input-search !pl-11 h-10 text-xs sm:text-sm"
                       />
-                      <Search className="w-4 h-4 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      {prodSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setProdSearch("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer p-0.5 rounded-full hover:bg-neutral-100"
+                          title="Clear search"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
 
                     <select
@@ -1324,10 +1648,15 @@ export default function AdminPanel({
 
                     <div className="flex rounded-lg border border-neutral-300 overflow-hidden bg-white">
                       <button
-                        onClick={() => setProdFlashFilter("all")}
+                        onClick={() => {
+                          setProdFlashFilter("all");
+                          setProdCategory("");
+                          setProdSearch("");
+                        }}
                         className={`px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors ${
-                          prodFlashFilter === "all" ? "bg-purple-900 text-white" : "text-neutral-700 hover:bg-neutral-100"
+                          prodFlashFilter === "all" && !prodCategory && !prodSearch ? "bg-purple-900 text-white" : "text-neutral-700 hover:bg-neutral-100"
                         }`}
+                        title="Click to reset filters and view all products"
                       >
                         All ({products.length})
                       </button>
@@ -1352,13 +1681,14 @@ export default function AdminPanel({
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingProduct(null);
                       setModalOpen(true);
                     }}
-                    className="ap-btn ap-btn-primary gap-1.5"
+                    className="h-10 px-4 bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:from-pink-500 hover:to-amber-500 text-white text-xs font-bold rounded-xl shadow-xs shadow-rose-600/25 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 shrink-0" />
                     <span>Add New Product</span>
                   </button>
                 </div>
@@ -1420,9 +1750,9 @@ export default function AdminPanel({
                               <td className="font-mono text-xs font-semibold text-neutral-700">{p.brand || "Alike Sovereign"}</td>
                               <td className="capitalize text-xs text-neutral-600">{p.category}</td>
                               <td>
-                                <div className="font-bold text-neutral-900">₹{p.price.toLocaleString("en-IN")}</div>
+                                <div className="font-bold text-neutral-900">₹{(p.price ?? 0).toLocaleString("en-IN")}</div>
                                 {p.mrp && p.mrp > p.price && (
-                                  <div className="text-[11px] text-neutral-400 line-through">₹{p.mrp.toLocaleString("en-IN")}</div>
+                                  <div className="text-[11px] text-neutral-400 line-through">₹{(p.mrp ?? 0).toLocaleString("en-IN")}</div>
                                 )}
                               </td>
                               <td>
@@ -1464,40 +1794,60 @@ export default function AdminPanel({
                                 </div>
                               </td>
                               <td className="text-right ap-sticky-col-cell">
-                                <div className="flex items-center justify-end gap-1.5 min-w-[130px]">
+                                <div className="flex items-center justify-end gap-1.5 min-w-[120px]">
                                   <button
+                                    type="button"
                                     onClick={() => setViewingProduct(p)}
-                                    className="p-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-100 text-neutral-700 cursor-pointer shadow-xs transition-all hover:scale-105"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
                                     title="View Product Details"
                                     aria-label="View Product"
                                   >
-                                    <Eye className="w-4 h-4 text-blue-600" />
+                                    <Eye className="w-4 h-4" />
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={() => {
                                       setEditingProduct(p);
                                       setModalOpen(true);
                                     }}
-                                    className="p-1.5 rounded-lg border border-amber-200 bg-amber-50/50 hover:bg-amber-100 text-amber-700 cursor-pointer shadow-xs transition-all hover:scale-105"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
                                     title="Edit Product"
                                     aria-label="Edit Product"
                                   >
-                                    <Edit3 className="w-4 h-4 text-amber-600" />
+                                    <Edit3 className="w-4 h-4" />
                                   </button>
-                                  <GlassIconButton
-                                    icon={Trash2}
+                                  <button
+                                    type="button"
                                     onClick={() => handleDeleteProduct(p._id || String(p.id), p.name)}
-                                    variant="danger"
-                                    size="sm"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
                                     title="Delete Product"
                                     aria-label="Delete Product"
-                                    isLightMode={true}
-                                  />
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
                           );
                         })}
+                        {filteredProducts.length === 0 && (
+                          <tr>
+                            <td colSpan={9} className="text-center py-12 text-neutral-500">
+                              <div className="flex flex-col items-center justify-center gap-2">
+                                <Package className="w-8 h-8 text-neutral-300" />
+                                <p className="font-semibold text-sm">No products found matching the criteria</p>
+                                <p className="text-xs text-neutral-400">Try clearing filters or search terms to see all catalog items.</p>
+                                <button
+                                  type="button"
+                                  onClick={() => { setProdSearch(""); setProdCategory(""); setProdFlashFilter("all"); }}
+                                  className="mt-2 px-3.5 py-1.5 text-xs font-semibold bg-purple-900 hover:bg-purple-800 text-white rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Reset All Filters
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1510,14 +1860,24 @@ export default function AdminPanel({
               <div className="space-y-4">
                 <div className="ap-toolbar-row">
                   <div className="relative min-w-[240px] flex-1">
+                    <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                     <input
                       type="text"
                       placeholder="Search orders by number or member name..."
                       value={orderSearch}
                       onChange={(e) => setOrderSearch(e.target.value)}
-                      className="ap-input pl-8"
+                      className="ap-input ap-input-search !pl-11 h-10 text-xs sm:text-sm"
                     />
-                    <Search className="w-4 h-4 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    {orderSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setOrderSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer p-0.5 rounded-full hover:bg-neutral-100"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <select
@@ -1532,7 +1892,6 @@ export default function AdminPanel({
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
-<<<<<<< HEAD
 
                   <button
                     type="button"
@@ -1547,8 +1906,6 @@ export default function AdminPanel({
                     <Download className="w-3.5 h-3.5" />
                     <span>Export to Excel</span>
                   </button>
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                 </div>
 
                 <div className="ap-card">
@@ -1629,14 +1986,24 @@ export default function AdminPanel({
 
                 <div className="ap-toolbar-row">
                   <div className="relative min-w-[240px] flex-1">
+                    <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                     <input
                       type="text"
                       placeholder="Search by shop name, owner, phone, email, or address..."
                       value={sellerSearch}
                       onChange={(e) => setSellerSearch(e.target.value)}
-                      className="ap-input pl-8"
+                      className="ap-input ap-input-search !pl-11 h-10 text-xs sm:text-sm"
                     />
-                    <Search className="w-4 h-4 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    {sellerSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setSellerSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer p-0.5 rounded-full hover:bg-neutral-100"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                   <select
                     value={sellerStatusFilter}
@@ -1673,17 +2040,18 @@ export default function AdminPanel({
                             </td>
                           </tr>
                         ) : (
-                          filteredSellers.map((s) => {
+                          filteredSellers.map((s, sIdx) => {
+                            const sellerId = String(s._id || (s as any).id || `seller-${sIdx}`);
                             const isPending = s.status === "pending";
                             const displayName = s.shopName || s.storefront || "Storefront";
                             const contactEmail = s.email || s.ownerEmail || "—";
                             const contactPhone = s.mobileNumber || "—";
                             const address = s.businessAddress || "—";
-                            const isExpanded = expandedKycSellerId === s._id;
+                            const isExpanded = expandedKycSellerId === sellerId;
                             const isKycVerified = Boolean(s.kycVerified);
 
                             return (
-                              <React.Fragment key={s._id}>
+                              <React.Fragment key={sellerId}>
                                 <tr className={isPending ? "bg-amber-50/40" : undefined}>
                                   <td>
                                     <div className="flex items-center gap-2">
@@ -1693,7 +2061,7 @@ export default function AdminPanel({
                                       <div>
                                         <div className="font-serif font-bold text-neutral-900">{displayName}</div>
                                         <div className="text-[11px] text-neutral-400 font-mono">
-                                          ID: {s._id.slice(-6)}
+                                          ID: {sellerId ? sellerId.slice(-6) : "—"}
                                         </div>
                                       </div>
                                     </div>
@@ -1727,7 +2095,7 @@ export default function AdminPanel({
                                         )}
                                         <button
                                           type="button"
-                                          onClick={() => setExpandedKycSellerId(isExpanded ? null : s._id)}
+                                          onClick={() => setExpandedKycSellerId(isExpanded ? null : sellerId)}
                                           className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 inline-flex items-center gap-0.5 transition-colors cursor-pointer"
                                         >
                                           {isExpanded ? (
@@ -1754,8 +2122,8 @@ export default function AdminPanel({
                                     <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
                                       <button
                                         type="button"
-                                        onClick={() => handleToggleSellerKyc(s._id, isKycVerified)}
-                                        disabled={actionLoadingId === s._id}
+                                        onClick={() => handleToggleSellerKyc(sellerId, isKycVerified)}
+                                        disabled={actionLoadingId === sellerId}
                                         className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer ${
                                           isKycVerified
                                             ? "bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-300"
@@ -1771,8 +2139,8 @@ export default function AdminPanel({
                                         <>
                                           <button
                                             type="button"
-                                            onClick={() => handleSellerStatus(s._id, "approved")}
-                                            disabled={actionLoadingId === s._id}
+                                            onClick={() => handleSellerStatus(sellerId, "approved")}
+                                            disabled={actionLoadingId === sellerId}
                                             className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
                                             title="Approve seller application"
                                           >
@@ -1780,8 +2148,8 @@ export default function AdminPanel({
                                           </button>
                                           <button
                                             type="button"
-                                            onClick={() => handleSellerStatus(s._id, "rejected")}
-                                            disabled={actionLoadingId === s._id}
+                                            onClick={() => handleSellerStatus(sellerId, "rejected")}
+                                            disabled={actionLoadingId === sellerId}
                                             className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
                                             title="Reject seller application"
                                           >
@@ -1791,8 +2159,8 @@ export default function AdminPanel({
                                       ) : (
                                         <select
                                           value={s.status}
-                                          onChange={(e) => handleSellerStatus(s._id, e.target.value as SellerStatus)}
-                                          disabled={actionLoadingId === s._id}
+                                          onChange={(e) => handleSellerStatus(sellerId, e.target.value as SellerStatus)}
+                                          disabled={actionLoadingId === sellerId}
                                           className="ap-select py-1 text-xs w-auto font-medium"
                                         >
                                           <option value="approved">Approved</option>
@@ -1831,8 +2199,8 @@ export default function AdminPanel({
                                             </span>
                                             <button
                                               type="button"
-                                              onClick={() => handleToggleSellerKyc(s._id, isKycVerified)}
-                                              disabled={actionLoadingId === s._id}
+                                              onClick={() => handleToggleSellerKyc(sellerId, isKycVerified)}
+                                              disabled={actionLoadingId === sellerId}
                                               className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                                                 isKycVerified
                                                   ? "bg-rose-100 text-rose-800 hover:bg-rose-200"
@@ -1921,27 +2289,73 @@ export default function AdminPanel({
             {/* SECTION 5: CUSTOMERS */}
             {section === "customers" && (
               <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#141B2D] p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>Customers Management</span>
+                      <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                        {customers.length} Members
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-neutral-400">
+                      Auto-VIP tagging active for members with &gt; 10 orders
+                    </p>
+                  </div>
+
+                  {/* Filter Buttons */}
+                  <div className="flex bg-slate-100 dark:bg-neutral-800 p-1 rounded-xl gap-1 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setCustTierFilter("")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        !custTierFilter ? "bg-white dark:bg-neutral-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-600 dark:text-neutral-400 hover:text-slate-900"
+                      }`}
+                    >
+                      All Members
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustTierFilter("VIP")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        custTierFilter === "VIP" ? "bg-amber-500 text-slate-950 shadow-xs font-black" : "text-slate-600 dark:text-neutral-400 hover:text-amber-500"
+                      }`}
+                    >
+                      <Crown className="w-3.5 h-3.5" />
+                      <span>VIP Members</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustTierFilter("Normal")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        custTierFilter === "Normal" ? "bg-white dark:bg-neutral-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-600 dark:text-neutral-400 hover:text-slate-900"
+                      }`}
+                    >
+                      Normal Members
+                    </button>
+                  </div>
+                </div>
+
                 <div className="ap-toolbar-row">
                   <div className="relative min-w-[240px] flex-1">
+                    <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                     <input
                       type="text"
                       placeholder="Search customers by name, email, or phone..."
                       value={custSearch}
                       onChange={(e) => setCustSearch(e.target.value)}
-                      className="ap-input pl-8"
+                      className="ap-input ap-input-search !pl-11 h-10 text-xs sm:text-sm"
                     />
-                    <Search className="w-4 h-4 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    {custSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setCustSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer p-0.5 rounded-full hover:bg-neutral-100"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                  <select
-                    value={custTierFilter}
-                    onChange={(e) => setCustTierFilter(e.target.value)}
-                    className="ap-select w-auto min-w-[140px]"
-                  >
-                    <option value="">All VIP Tiers</option>
-                    <option value="Platinum">Platinum</option>
-                    <option value="Gold">Gold</option>
-                    <option value="Silver">Silver</option>
-                  </select>
                 </div>
 
                 {!isSuperAdmin && (
@@ -1958,9 +2372,10 @@ export default function AdminPanel({
                         <tr>
                           <th>Member</th>
                           <th>Contact</th>
-                          <th>VIP Tier</th>
-                          <th>Account Status</th>
+                          <th>Total Orders</th>
                           <th>Total Spend</th>
+                          <th>VIP Tier Status</th>
+                          <th>Account Status</th>
                           {isSuperAdmin && <th className="text-right">Super Admin Control</th>}
                         </tr>
                       </thead>
@@ -1968,28 +2383,47 @@ export default function AdminPanel({
                         {filteredCustomers.map((c) => (
                           <tr key={c._id}>
                             <td>
-                              <div className="font-bold text-neutral-900">{c.name}</div>
+                              <div className="font-bold text-neutral-900 dark:text-white">{c.name}</div>
                               <div className="text-[11px] text-neutral-500 font-mono">{c.email}</div>
                             </td>
                             <td className="text-xs font-mono">{c.phone || c.mobileNumber || "—"}</td>
+                            <td className="font-bold text-slate-800 dark:text-neutral-200 text-xs">
+                              {c.ordersCount || 0} Orders
+                            </td>
+                            <td className="font-bold text-xs">₹{c.lifetimeSpend?.toLocaleString("en-IN") || 0}</td>
                             <td>
-                              {isSuperAdmin ? (
-                                <select
-                                  value={c.tier}
-                                  onChange={(e) => handleUpdateTier(c._id, e.target.value)}
-                                  className="ap-select py-1 text-xs w-auto font-bold"
-                                >
-                                  <option value="Platinum">Platinum</option>
-                                  <option value="Gold">Gold</option>
-                                  <option value="Silver">Silver</option>
-                                </select>
-                              ) : (
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                  c.tier === 'Platinum' ? 'bg-purple-100 text-purple-800' : c.tier === 'Gold' ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-700'
-                                }`}>
-                                  {c.tier}
-                                </span>
-                              )}
+                              {(() => {
+                                const isAutoVip = (c.ordersCount || 0) > 10;
+                                const isVip = c.tier === "VIP" || c.tier === "Platinum" || isAutoVip;
+
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    {isVip ? (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-extrabold text-[11px] rounded-lg">
+                                        <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                        <span>{isAutoVip ? "VIP (Auto-Tagged)" : "VIP"}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-neutral-300 font-semibold text-[11px] rounded-lg border border-slate-200 dark:border-neutral-700">
+                                        <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                        <span>Normal</span>
+                                      </span>
+                                    )}
+
+                                    {isSuperAdmin && (
+                                      <select
+                                        value={isVip ? "VIP" : "Normal"}
+                                        onChange={(e) => handleUpdateTier(c._id, e.target.value)}
+                                        className="ap-select py-1 px-2 text-[11px] w-auto font-bold ml-1"
+                                        title="Manually override tier"
+                                      >
+                                        <option value="VIP">VIP</option>
+                                        <option value="Normal">Normal</option>
+                                      </select>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td>
                               {c.isBlocked ? (
@@ -1998,7 +2432,6 @@ export default function AdminPanel({
                                 <span className="ap-seal ap-seal-active">Active</span>
                               )}
                             </td>
-                            <td className="font-bold text-xs">₹{c.lifetimeSpend?.toLocaleString("en-IN") || 0}</td>
                             {isSuperAdmin && (
                               <td className="text-right">
                                 <button
@@ -2110,96 +2543,24 @@ export default function AdminPanel({
               </div>
             )}
 
-            {/* SECTION 7: ADMIN USERS (Super Admin Exclusive) */}
-            {section === "adminUsers" && isSuperAdmin && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-neutral-900">Administrator Accounts Directory</h3>
-                    <p className="text-xs text-neutral-500 font-mono">
-                      Database source: <code className="bg-neutral-100 px-1 py-0.5 rounded text-purple-700">alikendshop.admins</code>
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setCreateAdminModalOpen(true)}
-                    className="ap-btn ap-btn-primary gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Create New Admin</span>
-                  </button>
-                </div>
-
-                <div className="ap-card">
-                  <div className="ap-table-wrap">
-                    <table className="ap-table">
-                      <thead>
-                        <tr>
-                          <th>Admin Name</th>
-                          <th>Email Address</th>
-                          <th>Role Type</th>
-                          <th>Permissions Scope</th>
-                          <th>Status</th>
-                          <th className="text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {adminUsers.map((a) => {
-                          const isRoot = a.email?.toLowerCase() === "noyondey176@gmail.com";
-                          return (
-                            <tr key={a._id || a.email}>
-                              <td>
-                                <div className="flex items-center gap-2.5">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                                    a.role === 'superadmin' ? 'bg-purple-900 text-amber-300' : 'bg-sky-900 text-sky-200'
-                                  }`}>
-                                    {a.name ? a.name.charAt(0).toUpperCase() : "A"}
-                                  </div>
-                                  <div className="font-bold text-neutral-900">{a.name}</div>
-                                </div>
-                              </td>
-                              <td className="font-mono text-xs text-neutral-700">{a.email}</td>
-                              <td>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-black font-mono uppercase ${
-                                  a.role === 'superadmin'
-                                    ? 'bg-purple-100 text-purple-900 border border-purple-300'
-                                    : 'bg-blue-100 text-blue-900 border border-blue-300'
-                                }`}>
-                                  {a.role === 'superadmin' ? '👑 Super Admin' : '💼 Operations Admin'}
-                                </span>
-                              </td>
-                              <td className="text-xs text-neutral-600">
-                                {a.role === 'superadmin' ? (
-                                  <span className="text-purple-800 font-semibold">Full Root Control + Admin Management</span>
-                                ) : (
-                                  <span className="text-neutral-500">Products & Orders Only</span>
-                                )}
-                              </td>
-                              <td>
-                                <span className="ap-seal ap-seal-active">Active</span>
-                              </td>
-                              <td className="text-right">
-                                {isRoot ? (
-                                  <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded border border-purple-200">
-                                    Protected Root
-                                  </span>
-                                ) : (
-                                  <button
-                                    onClick={() => initiateDeleteAdmin(a)}
-                                    className="p-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 cursor-pointer transition-colors"
-                                    title="Revoke Admin Access"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+            {/* SECTION 7: ADMIN MINISTER — SOVEREIGN ADMINISTRATION DIRECTORATE */}
+            {section === "adminUsers" && (
+              <AdminMinisterSection
+                adminUsers={adminUsers}
+                isSuperAdmin={isSuperAdmin}
+                currentAdminEmail={currentAdmin?.email || ""}
+                onRefresh={async () => {
+                  try {
+                    const adminsList = await adminApi.getAdminUsers();
+                    setAdminUsers(Array.isArray(adminsList) ? adminsList : ((adminsList as any)?.admins || []));
+                  } catch (e) {
+                    console.warn("Could not reload admin users:", e);
+                  }
+                }}
+                onFlashSuccess={(msg) => flashSuccess(msg)}
+                openCreateModalDirectly={createAdminModalOpen}
+                onCloseCreateModalDirectly={() => setCreateAdminModalOpen(false)}
+              />
             )}
 
             {/* SECTION: PLATFORM COMMISSION & WALLET (Super Admin Exclusive) */}
@@ -2218,14 +2579,24 @@ export default function AdminPanel({
               <div className="space-y-4">
                 <div className="ap-toolbar-row">
                   <div className="relative min-w-[240px] flex-1">
+                    <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                     <input
                       type="text"
                       placeholder="Search logs by user, email, IP, or details..."
                       value={activitySearch}
                       onChange={(e) => setActivitySearch(e.target.value)}
-                      className="ap-input pl-8"
+                      className="ap-input ap-input-search !pl-11 h-10 text-xs sm:text-sm"
                     />
-                    <Search className="w-4 h-4 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    {activitySearch && (
+                      <button
+                        type="button"
+                        onClick={() => setActivitySearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer p-0.5 rounded-full hover:bg-neutral-100"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                   <select
                     value={activityFilter}
@@ -2302,6 +2673,41 @@ export default function AdminPanel({
                 isSuperAdmin={isSuperAdmin}
               />
             )}
+
+            {/* SECTION: CATEGORY CAROUSEL MANAGEMENT */}
+            {section === "categories" && (
+              <AdminCategoryManager
+                categories={categoriesList}
+                onCategoriesChange={setCategoriesList}
+                onFlashSuccess={flashSuccess}
+                onError={setError}
+              />
+            )}
+
+            {/* SECTION 10: FLASH PREMIUM HOURS MANAGEMENT */}
+            {section === "flashSale" && (
+              <FlashSaleManagement
+                products={products}
+                onProductsRefresh={() => loadAll(currentAdmin)}
+                onFlashSuccess={flashSuccess}
+                onError={setError}
+                isSuperAdmin={isSuperAdmin}
+              />
+            )}
+
+            {/* SECTION 11: MULTI-DATABASE & CLOUD SERVICES HUB */}
+            {section === "databaseHub" && (
+              <DatabaseHubSection />
+            )}
+
+            {/* SECTION 12: CUSTOMER CARE & CENTRAL HOTLINE MANAGEMENT SYSTEM */}
+            {section === "customerCare" && (
+              <CustomerCareModule
+                isSuperAdmin={isSuperAdmin}
+                onFlashSuccess={flashSuccess}
+                onError={setError}
+              />
+            )}
           </div>
         </main>
       </div>
@@ -2316,103 +2722,6 @@ export default function AdminPanel({
           }}
           onSave={handleSaveProduct}
         />
-      )}
-
-      {/* CREATE ADMIN MODAL (Super Admin Exclusive) */}
-      {createAdminModalOpen && isSuperAdmin && (
-        <div className="ap-modal-backdrop" onClick={() => setCreateAdminModalOpen(false)}>
-          <div className="ap-modal max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-serif font-bold text-neutral-900 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-amber-600" />
-                <span>Create Administrator Account</span>
-              </h3>
-              <button onClick={() => setCreateAdminModalOpen(false)} className="text-neutral-400 hover:text-neutral-900">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-neutral-500 mb-4">
-              Provision a new administrative account in <code className="bg-neutral-100 px-1 py-0.5 rounded font-mono">alikendshop.admins</code>.
-            </p>
-
-            <form onSubmit={handleCreateAdminAccount} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase font-mono mb-1">Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Operations Manager"
-                  value={newAdminName}
-                  onChange={(e) => setNewAdminName(e.target.value)}
-                  className="ap-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase font-mono mb-1">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="e.g. ops.staff@alike.com"
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                  className="ap-input font-mono"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase font-mono mb-1">Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••••••"
-                  value={newAdminPassword}
-                  onChange={(e) => setNewAdminPassword(e.target.value)}
-                  className="ap-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase font-mono mb-1">Role Type</label>
-                <select
-                  value={newAdminRole}
-                  onChange={(e) => setNewAdminRole(e.target.value as any)}
-                  className="ap-select font-semibold"
-                >
-                  <option value="admin">Regular Admin (Products & Orders Only)</option>
-                  <option value="superadmin">Super Admin (Full Root Permissions)</option>
-                </select>
-              </div>
-
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900">
-                <strong>Role Permissions:</strong>
-                {newAdminRole === 'admin' ? (
-                  <p className="mt-0.5">Regular Admin can manage products & orders. Sales reports, customer blocking, and admin management are blocked.</p>
-                ) : (
-                  <p className="mt-0.5">Super Admin receives unrestricted access across all platform modules.</p>
-                )}
-              </div>
-
-              <div className="ap-modal-actions">
-                <button
-                  type="button"
-                  onClick={() => setCreateAdminModalOpen(false)}
-                  className="ap-btn ap-btn-ghost"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingAdmin}
-                  className="ap-btn ap-btn-primary bg-amber-600 hover:bg-amber-700"
-                >
-                  {creatingAdmin ? "Creating..." : "Save Admin Account"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
       {/* READ-ONLY PRODUCT VIEW MODAL */}
@@ -2458,6 +2767,187 @@ export default function AdminPanel({
           onConfirm={handleConfirmDeleteAdmin}
         />
       )}
+
+      {/* CHANGE PASSWORD MODAL */}
+      {changePasswordModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setChangePasswordModalOpen(false)}>
+          <div className="ap-modal max-w-md bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white my-auto animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-serif font-bold flex items-center gap-2">
+                <Lock className="w-5 h-5 text-amber-500" />
+                <span>Change Administrator Password</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setChangePasswordModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+              Update password for <strong className="text-neutral-800 dark:text-neutral-200 font-mono">{currentAdmin?.email || "Current Admin"}</strong>. The new password will take effect immediately.
+            </p>
+
+            {changePasswordError && (
+              <div className="p-3 mb-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{changePasswordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminChangePassword} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase font-mono mb-1">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    placeholder="Enter current password"
+                    value={currentPasswordInput}
+                    onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                    className="ap-input pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                  >
+                    {showCurrentPassword ? <Eye className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase font-mono mb-1">
+                  New Password (min 10 characters)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={newPasswordInput}
+                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                    className="ap-input pr-10"
+                    required
+                    minLength={10}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                  >
+                    {showNewPassword ? <Eye className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase font-mono mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Re-enter new password"
+                  value={confirmPasswordInput}
+                  onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                  className="ap-input"
+                  required
+                  minLength={10}
+                />
+              </div>
+
+              <div className="ap-modal-actions pt-2">
+                <button
+                  type="button"
+                  onClick={() => setChangePasswordModalOpen(false)}
+                  className="ap-btn ap-btn-ghost"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="ap-btn ap-btn-primary bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {isChangingPassword ? "Updating Password..." : "Change Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* SUPER ADMIN RESET PASSWORD MODAL */}
+      {resetPasswordAdmin && isSuperAdmin && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setResetPasswordAdmin(null)}>
+          <div className="ap-modal max-w-md bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white my-auto animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-serif font-bold flex items-center gap-2">
+                <Key className="w-5 h-5 text-amber-500" />
+                <span>Reset Administrator Password</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setResetPasswordAdmin(null)}
+                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+              Enter a new secure password for <strong className="text-neutral-800 dark:text-neutral-200 font-mono">{resetPasswordAdmin.email}</strong>.
+            </p>
+
+            {resetPasswordError && (
+              <div className="p-3 mb-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{resetPasswordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSuperAdminResetPassword} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase font-mono mb-1">
+                  New Password (min 10 characters)
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter new password for this admin"
+                  value={resetPasswordInput}
+                  onChange={(e) => setResetPasswordInput(e.target.value)}
+                  className="ap-input"
+                  required
+                  minLength={10}
+                />
+              </div>
+
+              <div className="ap-modal-actions pt-2">
+                <button
+                  type="button"
+                  onClick={() => setResetPasswordAdmin(null)}
+                  className="ap-btn ap-btn-ghost"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isResettingPassword}
+                  className="ap-btn ap-btn-primary bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {isResettingPassword ? "Resetting..." : "Reset Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -2487,7 +2977,6 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
   const [isFlashSale, setIsFlashSale] = useState(product?.isFlashSale ?? (product?.badge === "SALE"));
   const [rating, setRating] = useState(product?.rating !== undefined ? String(product.rating) : "4.8");
   const [reviewsCount, setReviewsCount] = useState(product?.reviewsCount !== undefined ? String(product.reviewsCount) : "148");
-<<<<<<< HEAD
   const initialImagesList: string[] = (product?.images && product.images.length > 0)
     ? product.images
     : product?.image
@@ -2499,10 +2988,6 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
   const [urlInput, setUrlInput] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-=======
-  const [image, setImage] = useState(product?.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600");
-  const [additionalImages, setAdditionalImages] = useState((product?.images || []).slice(1).join("\n"));
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   const [description, setDescription] = useState(product?.description || "Immersive active noise-cancelling headphones tuned to golden standard.");
   const [isWholesale, setIsWholesale] = useState(product?.isWholesale || false);
   const [wholesalePrice, setWholesalePrice] = useState(product?.wholesalePrice ? String(product.wholesalePrice) : "2999");
@@ -2519,8 +3004,8 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
   const numPrice = Number(price) || 0;
   const numMrp = Number(mrp) || numPrice;
   const calculatedDiscount = numMrp > numPrice ? Math.round(((numMrp - numPrice) / numMrp) * 100) : 0;
+  const stockUnits = Math.max(0, Number(stock) || 0);
 
-<<<<<<< HEAD
   // File upload reader
   const handleFileUpload = (files: FileList | File[]) => {
     const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
@@ -2601,8 +3086,6 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
     }
   };
 
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -2610,12 +3093,8 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
       return;
     }
 
-<<<<<<< HEAD
     const finalPrimary = image.trim() || images[0] || "";
     const finalImagesList = images.length > 0 ? images.filter(Boolean) : (finalPrimary ? [finalPrimary] : []);
-=======
-    const imagesList = [image.trim(), ...additionalImages.split("\n").map(s => s.trim()).filter(Boolean)];
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
     onSave({
       id: product?.id || Date.now(),
@@ -2632,13 +3111,8 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
       isFlashSale: Boolean(isFlashSale),
       rating: Number(rating) || 4.8,
       reviewsCount: Number(reviewsCount) || 120,
-<<<<<<< HEAD
       image: finalPrimary,
       images: finalImagesList,
-=======
-      image: image.trim(),
-      images: imagesList,
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
       description: description.trim(),
       isWholesale: Boolean(isWholesale),
       wholesalePrice: Number(wholesalePrice) || 0,
@@ -2651,138 +3125,119 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
     });
   };
 
-  return (
-    <div className="ap-modal-backdrop" onClick={onClose}>
+  useEffect(() => {
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = orig;
+    };
+  }, []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto" onClick={onClose}>
       <div
-        className="relative w-full max-w-5xl max-h-[92vh] rounded-3xl bg-white shadow-2xl overflow-hidden flex flex-col lg:flex-row border border-neutral-200/80 my-auto"
+        className="relative w-full max-w-4xl max-h-[min(92vh,850px)] rounded-3xl bg-white dark:bg-neutral-900 shadow-2xl border border-neutral-200/90 dark:border-neutral-800 flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top-Right Absolute Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-neutral-100/80 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 transition-colors backdrop-blur-sm cursor-pointer shadow-sm"
-          title="Close modal"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* LEFT PANEL: ALIKE ND Pink/Black Brand & Real-Time Product Preview Panel */}
-        <div className="w-full lg:w-5/12 bg-gradient-to-br from-neutral-950 via-[#1f0518] to-[#600d3a] p-5 sm:p-6 lg:p-7 flex flex-col justify-between text-white relative overflow-hidden border-b lg:border-b-0 lg:border-r border-pink-950/40 shrink-0">
-          {/* Subtle Pink Ambient Glow */}
-          <div className="absolute -top-24 -left-24 w-64 h-64 bg-[#E91269]/25 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-[#FF4586]/20 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Heading & Subtitle */}
-          <div className="relative z-10 pr-10 lg:pr-0">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-mono font-bold tracking-widest uppercase mb-3">
-              <Sparkles className="w-3 h-3 text-pink-400 shrink-0" />
-              <span>Storefront Catalog Sync</span>
+        {/* Sticky Header */}
+        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/40 shadow-sm">
+              <Edit3 className="w-5 h-5" />
             </div>
-            <h3 className="text-xl sm:text-2xl lg:text-[1.65rem] xl:text-3xl font-serif font-black tracking-tight text-white mb-2.5 leading-snug break-words max-w-full">
-              {product ? `Edit Product: ${product.name}` : "Create New Luxury Product"}
-            </h3>
-            <p className="text-xs text-white/80 font-mono leading-relaxed break-words max-w-full">
-              Live storefront synchronization across Flash Premium Hours and Category listings
-            </p>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest font-mono">
+                  {product ? "Edit Catalog Product" : "New Catalog Product"}
+                </span>
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                  {category || "Catalog"}
+                </span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-serif font-bold text-neutral-900 dark:text-white leading-tight mt-0.5">
+                {product ? (name || "Edit Catalog Product") : "Create New Product"}
+              </h3>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+            title="Close modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-          {/* Live Product Image & Card Preview */}
-          <div className="relative z-10 my-6">
-            <div className="relative rounded-2xl overflow-hidden border border-white/15 bg-white/5 backdrop-blur-md shadow-2xl group">
-              <div className="aspect-[4/3] w-full relative overflow-hidden bg-neutral-900 flex items-center justify-center">
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-7 space-y-4 text-xs bg-white dark:bg-neutral-900">
+            {/* Live Storefront Preview Card (Compact & Interactive) */}
+            <div className="p-4 rounded-2xl bg-slate-950 text-white border border-slate-800 flex flex-col sm:flex-row items-center gap-4 shadow-lg">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-800 relative flex items-center justify-center">
                 {image ? (
                   <img
                     src={image}
-                    alt={name || "Product preview"}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    alt={name || "Preview"}
+                    className={`w-full h-full object-cover ${stockUnits === 0 ? "opacity-40 grayscale" : ""}`}
                     referrerPolicy="no-referrer"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
-                        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+                        "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=600&q=80";
                     }}
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-8 text-center text-white/40">
-                    <Package className="w-12 h-12 mb-2 text-pink-400/50 stroke-[1.5]" />
-                    <span className="text-xs font-mono">Image preview will appear here</span>
-                  </div>
+                  <Package className="w-8 h-8 text-slate-600" />
                 )}
-
-                {/* Overlaid Badges */}
-                <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                {stockUnits === 0 && (
+                  <span className="absolute inset-0 bg-black/60 flex items-center justify-center text-[9px] font-black uppercase text-rose-400">
+                    Stock Out
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0 text-center sm:text-left space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono uppercase font-bold text-amber-400 tracking-wider">
+                    {brand || "BRAND ATELIER"}
+                  </span>
                   {badge && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-pink-600 text-white font-mono text-[10px] font-black uppercase shadow-md">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-500 text-white">
                       {badge}
                     </span>
                   )}
                   {isFlashSale && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-neutral-950 font-mono text-[10px] font-black uppercase flex items-center gap-1 shadow-md">
-                      <Flame className="w-3 h-3 text-neutral-950" />
-                      Flash Deal
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500 text-slate-950 flex items-center gap-0.5">
+                      <Flame className="w-3 h-3 text-slate-950" /> Flash Deal
                     </span>
                   )}
                 </div>
-
-                <div className="absolute top-3 right-3">
-                  <span className="px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white/90 font-mono text-[10px] font-medium border border-white/20">
-                    {category}
-                  </span>
-                </div>
-              </div>
-
-              {/* Overlaid Metadata Card */}
-              <div className="p-4 bg-neutral-950/80 backdrop-blur-md border-t border-white/10">
-                <div className="text-[10px] uppercase font-mono tracking-wider text-pink-400 font-bold mb-0.5">
-                  {brand || "Brand Name"}
-                </div>
-                <h4 className="text-sm font-serif font-bold text-white truncate mb-2">
+                <h4 className="text-base font-bold text-white truncate font-serif">
                   {name || "Product Title Preview"}
                 </h4>
-
-                <div className="flex items-baseline justify-between pt-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-mono font-black text-pink-300">
-                      ₹{Number(price || 0).toLocaleString("en-IN")}
-                    </span>
-                    {Number(mrp) > Number(price) && (
-                      <span className="text-xs font-mono line-through text-white/40">
-                        ₹{Number(mrp).toLocaleString("en-IN")}
-                      </span>
-                    )}
-                  </div>
+                <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs font-mono">
+                  <span className="text-base font-black text-amber-400">₹{numPrice.toLocaleString("en-IN")}</span>
+                  {numMrp > numPrice && (
+                    <span className="text-slate-400 line-through">₹{numMrp.toLocaleString("en-IN")}</span>
+                  )}
                   {calculatedDiscount > 0 && (
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-mono font-black">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">
                       {calculatedDiscount}% OFF
                     </span>
                   )}
-                </div>
-
-                <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-white/60 font-mono">
-                  <span className="flex items-center gap-1 text-amber-400 font-bold">
-                    ★ {rating} <span className="text-white/40 font-normal">({reviewsCount})</span>
+                  <span className="text-slate-400 hidden sm:inline">•</span>
+                  <span className={stockUnits > 0 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
+                    {stockUnits > 0 ? `${stockUnits} in stock (${stockStatus})` : "Stock Out"}
                   </span>
-                  <span className="text-pink-300 font-semibold">{(stockStatus === '20-Min Express' || stockStatus === '20 Min Express') ? 'Fast Express' : stockStatus}</span>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Footer Security Badge */}
-          <div className="relative z-10 text-[11px] font-mono text-white/40 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Authenticated Alikend Luxury Storefront Synchronizer</span>
-          </div>
-        </div>
-
-        {/* RIGHT PANEL: Clean, Compact Form Panel */}
-        <div className="lg:w-7/12 flex-1 p-6 lg:p-8 overflow-y-auto max-h-[92vh] bg-white">
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             {/* Form Section Header */}
-            <div className="border-b border-neutral-100 pb-3 mb-2">
-              <h4 className="text-sm font-bold text-neutral-900 uppercase font-mono tracking-wider">
+            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2 mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-bold text-neutral-900 dark:text-white uppercase font-mono tracking-wider">
                 Product Specification & Storefront Details
               </h4>
-              <p className="text-[11px] text-neutral-500">All fields sync automatically to the customer marketplace.</p>
+              <span className="text-[10px] text-neutral-500 font-mono">All fields sync automatically</span>
             </div>
 
             {/* Row 1: Title & Brand */}
@@ -2971,13 +3426,14 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
             {/* Row 5: Stock count, Rating & Reviews */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-bold text-neutral-700 uppercase font-mono mb-1">Inventory Stock Units</label>
+                <label className="block font-bold text-neutral-700 uppercase font-mono mb-1">INVENTORY STOCK UNITS</label>
                 <input
                   type="number"
+                  min="0"
                   value={stock}
                   onChange={(e) => setStock(e.target.value)}
-                  placeholder="15"
-                  className="ap-input font-mono"
+                  placeholder="Enter stock count"
+                  className="ap-input font-mono font-bold"
                 />
               </div>
 
@@ -3007,7 +3463,6 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
               </div>
             </div>
 
-<<<<<<< HEAD
             {/* Row 6: Multi-Image Upload & Management */}
             <div className="space-y-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-200">
               <div className="flex items-center justify-between">
@@ -3190,24 +3645,6 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                   ⚠️ At least one product image is recommended for storefront display.
                 </p>
               )}
-=======
-            {/* Row 6: Image URL & Preview */}
-            <div className="space-y-2">
-              <label className="block font-bold text-neutral-700 uppercase font-mono">Primary Image URL *</label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="url"
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="ap-input font-mono flex-1 text-xs"
-                  required
-                />
-                <div className="w-10 h-10 rounded-lg overflow-hidden border bg-neutral-100 shrink-0">
-                  <img src={image} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </div>
-              </div>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
             </div>
 
             {/* Row 7: Description */}
@@ -3348,26 +3785,29 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Modal Actions */}
-            <div className="ap-modal-actions pt-4 border-t border-neutral-200 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={onClose}
-                className="ap-btn ap-btn-ghost flex items-center gap-2 text-neutral-600 hover:text-neutral-900 cursor-pointer font-medium"
-              >
-                <span>←</span>
-                <span>Cancel</span>
-              </button>
-              <button type="submit" className="ap-btn ap-btn-primary flex items-center gap-2 cursor-pointer shadow-md">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{product ? "Save & Publish Changes" : "Create Product"}</span>
-              </button>
-            </div>
-          </form>
-        </div>
+          {/* Sticky Footer Action Bar */}
+          <div className="px-6 py-3.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/95 dark:bg-neutral-900/95 backdrop-blur-md flex items-center justify-between gap-3 shrink-0 z-20">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-700 shadow-xs cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+            >
+              ← Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:from-pink-500 hover:to-amber-500 shadow-md shadow-rose-600/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{product ? "Save & Publish Changes" : "Create Product"}</span>
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3382,210 +3822,279 @@ interface ProductViewModalProps {
 
 function ProductViewModal({ product, onClose, onEdit }: ProductViewModalProps) {
   const [selectedImg, setSelectedImg] = useState(product.image || (product.images && product.images[0]) || "");
+  const [copiedSku, setCopiedSku] = useState(false);
   const allImages = [product.image, ...(product.images || [])].filter((img, idx, arr) => img && arr.indexOf(img) === idx);
   
-  const discount = product.mrp && product.mrp > product.price 
+  const discount = product.mrp && product.price && product.mrp > product.price 
     ? Math.round(((product.mrp - product.price) / product.mrp) * 100) 
     : 0;
 
-  return (
-    <div className="ap-modal-backdrop" onClick={onClose}>
-      <div className="ap-modal max-w-3xl max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
-              <Eye className="w-4 h-4" />
+  useEffect(() => {
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = orig;
+    };
+  }, []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto" onClick={onClose}>
+      <div
+        className="relative w-full max-w-4xl max-h-[min(90vh,760px)] rounded-3xl bg-white dark:bg-neutral-900 shadow-2xl border border-neutral-200/90 dark:border-neutral-800 flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200"
+        style={{ maxWidth: "880px", width: "94vw" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Sticky Header */}
+        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/40 shadow-sm">
+              <Eye className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-neutral-100 text-neutral-600">
-                  {product.category}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest font-mono">
+                  Product Overview
                 </span>
-                <span className="text-[10px] font-mono text-neutral-400">
-                  SKU: {String(product._id || product.id).slice(-8).toUpperCase()}
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                  {product.category || "Catalog"}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sku = String(product?._id || product?.id || "ITEM").slice(-8).toUpperCase();
+                    navigator.clipboard?.writeText(sku);
+                    setCopiedSku(true);
+                    setTimeout(() => setCopiedSku(false), 2000);
+                  }}
+                  className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 flex items-center gap-1 bg-neutral-50 dark:bg-neutral-800/60 px-2 py-0.5 rounded border border-neutral-200/60 dark:border-neutral-700/60 transition-colors"
+                  title="Click to copy SKU"
+                >
+                  <span>SKU: {String(product?._id || product?.id || "ITEM").slice(-8).toUpperCase()}</span>
+                  {copiedSku ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-neutral-400" />}
+                </button>
               </div>
-              <h3 className="text-lg font-serif font-bold text-neutral-900 leading-tight mt-0.5">
-                {product.name}
+              <h3 className="text-lg sm:text-xl font-serif font-bold text-neutral-900 dark:text-white leading-tight mt-1">
+                {product.name || "Untitled Product"}
               </h3>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              title="Edit product details"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Edit Product</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95"
+              title="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 py-4">
-          {/* Left: Product Images */}
-          <div className="md:col-span-5 space-y-3">
-            <div className="aspect-square w-full rounded-2xl overflow-hidden bg-neutral-100 border border-neutral-200 shadow-inner flex items-center justify-center">
-              <img
-                src={selectedImg || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"}
-                alt={product.name}
-                className="w-full h-full object-contain p-2"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            {allImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {allImages.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedImg(img)}
-                    className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
-                      selectedImg === img ? 'border-amber-500 scale-95 shadow-md' : 'border-neutral-200 opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt="Thumb" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Right: Specifications & Pricing */}
-          <div className="md:col-span-7 space-y-4 text-xs">
-            {/* Price & Discount Card */}
-            <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
-              <div className="flex items-baseline gap-3">
-                <span className="text-2xl font-black text-neutral-900 font-mono">
-                  ₹{product.price.toLocaleString("en-IN")}
-                </span>
-                {product.mrp && product.mrp > product.price && (
-                  <span className="text-sm text-neutral-400 line-through font-mono">
-                    ₹{product.mrp.toLocaleString("en-IN")}
-                  </span>
-                )}
+        {/* Scrollable Body */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-7 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start">
+            {/* Left: Product Images */}
+            <div className="md:col-span-5 space-y-3.5">
+              <div className="aspect-square w-full rounded-2xl overflow-hidden bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/90 dark:border-neutral-700/80 shadow-sm flex items-center justify-center relative p-3 group">
+                <img
+                  src={selectedImg || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"}
+                  alt={product.name}
+                  className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                />
                 {discount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold font-mono text-xs">
+                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-emerald-600 text-white font-extrabold font-mono text-xs shadow-md">
                     {discount}% OFF
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-neutral-500 font-medium">
-                Standard GST rate (18%) and luxury packaging included in listed price.
-              </p>
+              {allImages.length > 1 && (
+                <div className="flex gap-2.5 overflow-x-auto pb-1.5 pt-0.5">
+                  {allImages.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImg(img)}
+                      className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
+                        selectedImg === img
+                          ? 'border-amber-500 scale-95 shadow-md ring-2 ring-amber-500/20'
+                          : 'border-neutral-200 dark:border-neutral-700 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Status and Visibility Pills */}
+              <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 rounded-xl border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-between text-xs">
+                <span className="text-neutral-500 dark:text-neutral-400 font-medium">Catalog Visibility:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Live in Store
+                </span>
+              </div>
             </div>
 
-            {/* Badges & Inventory Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white border border-neutral-200 rounded-xl space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 font-mono block">Inventory Stock</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-neutral-900">{product.stock || 0} Units</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                    {(product.stockStatus === '20-Min Express' || product.stockStatus === '20 Min Express') ? 'Fast Express' : (product.stockStatus || "In Stock")}
+            {/* Right: Specifications & Pricing */}
+            <div className="md:col-span-7 space-y-4 text-xs">
+              {/* Price & Discount Card */}
+              <div className="p-4 sm:p-5 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-200/90 dark:border-neutral-700/80 space-y-2">
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <span className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
+                    ₹{(product.price ?? 0).toLocaleString("en-IN")}
                   </span>
-                </div>
-              </div>
-
-              <div className="p-3 bg-white border border-neutral-200 rounded-xl space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 font-mono block">Customer Rating</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    <span className="font-extrabold text-neutral-900 text-sm">{product.rating?.toFixed(1) || "4.8"}</span>
-                  </div>
-                  <span className="text-neutral-400 font-medium">({product.reviewsCount || 0} reviews)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Flash Sale & Brand Info */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white border border-neutral-200 rounded-xl space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 font-mono block">Brand Atelier</span>
-                <span className="font-bold text-neutral-900">{product.brand || "Alike Luxury"}</span>
-              </div>
-
-              <div className="p-3 bg-white border border-neutral-200 rounded-xl space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 font-mono block">Flash Sale Program</span>
-                <div className="flex items-center gap-1.5">
-                  {product.isFlashSale || product.badge === "SALE" ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-800 flex items-center gap-1">
-                      <Flame className="w-3 h-3 text-orange-600" /> Flash Premium Hours Active
+                  {product.mrp && product.price && product.mrp > product.price && (
+                    <span className="text-sm sm:text-base text-neutral-400 dark:text-neutral-500 line-through font-mono">
+                      ₹{(product.mrp ?? 0).toLocaleString("en-IN")}
                     </span>
-                  ) : (
-                    <span className="text-[10px] text-neutral-500 font-medium">Standard Listing</span>
+                  )}
+                  {discount > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-extrabold font-mono text-xs">
+                      {discount}% OFF
+                    </span>
                   )}
                 </div>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+                  Standard GST rate (18%) and luxury packaging included in listed price.
+                </p>
               </div>
-            </div>
 
-            {/* Description */}
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold text-neutral-400 font-mono block">Description</span>
-              <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-3 rounded-xl border border-neutral-200 text-xs">
-                {product.description || "Authentic high-grade signature luxury piece from the Alike-ND boutique catalog."}
-              </p>
-            </div>
+              {/* Badges & Inventory Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3.5 bg-white dark:bg-neutral-800/80 border border-neutral-200/90 dark:border-neutral-700 rounded-xl space-y-1 shadow-sm">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 dark:text-neutral-500 font-mono block">Inventory Stock</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-base font-extrabold text-neutral-900 dark:text-white">{product.stock || 0} Units</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
+                      {(product.stockStatus === '20-Min Express' || product.stockStatus === '20 Min Express') ? 'Fast Express' : (product.stockStatus || "In Stock")}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Indian Statutory Marketplace Compliance Overview */}
-            <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-xl space-y-2">
-              <div className="flex items-center justify-between border-b border-amber-200/60 pb-1">
-                <span className="text-[10px] font-bold text-amber-900 uppercase font-mono flex items-center gap-1.5">
-                  <span>🏛️</span> Indian Statutory Listing Compliance
-                </span>
-                <span className="text-[9px] font-mono text-amber-700/80">Rule 6, E-Commerce 2020</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div>
-                  <span className="text-neutral-400 block text-[10px]">GST Rate:</span>
-                  <span className="font-bold text-neutral-900">{product.gstRate !== undefined ? `${product.gstRate}% GST (Included)` : '18% GST (Default)'}</span>
-                </div>
-                <div>
-                  <span className="text-neutral-400 block text-[10px]">HSN / SAC Code:</span>
-                  <span className="font-mono font-bold text-neutral-900">{product.hsnCode || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-neutral-400 block text-[10px]">Country of Origin:</span>
-                  <span className="font-bold text-neutral-900">{product.countryOfOrigin || 'India'}</span>
-                </div>
-                <div>
-                  <span className="text-neutral-400 block text-[10px]">Pack / Net Qty:</span>
-                  <span className="font-bold text-neutral-900">{product.packInfo || '1 Unit'}</span>
+                <div className="p-3.5 bg-white dark:bg-neutral-800/80 border border-neutral-200/90 dark:border-neutral-700 rounded-xl space-y-1 shadow-sm">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 dark:text-neutral-500 font-mono block">Customer Rating</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                      <span className="font-extrabold text-neutral-900 dark:text-white text-sm">{product.rating?.toFixed(1) || "4.8"}</span>
+                    </div>
+                    <span className="text-neutral-400 dark:text-neutral-500 font-medium">({product.reviewsCount || 0} reviews)</span>
+                  </div>
                 </div>
               </div>
-              {product.manufacturerDetails && (
-                <div className="pt-1 border-t border-amber-200/40 text-[10px]">
-                  <span className="text-neutral-400 block">Manufacturer / Importer:</span>
-                  <span className="text-neutral-800 font-medium">{product.manufacturerDetails}</span>
+
+              {/* Flash Sale & Brand Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3.5 bg-white dark:bg-neutral-800/80 border border-neutral-200/90 dark:border-neutral-700 rounded-xl space-y-1 shadow-sm">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 dark:text-neutral-500 font-mono block">Brand Atelier</span>
+                  <span className="font-bold text-neutral-900 dark:text-white text-sm">{product.brand || "Alike Luxury"}</span>
+                </div>
+
+                <div className="p-3.5 bg-white dark:bg-neutral-800/80 border border-neutral-200/90 dark:border-neutral-700 rounded-xl space-y-1 shadow-sm">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 dark:text-neutral-500 font-mono block">Flash Sale Program</span>
+                  <div className="flex items-center gap-1.5">
+                    {product.isFlashSale || product.badge === "SALE" ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-orange-600 dark:text-orange-400" /> Flash Premium Active
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">Standard Listing</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] uppercase font-bold text-neutral-400 dark:text-neutral-500 font-mono block">Description</span>
+                <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-800/40 p-3.5 rounded-xl border border-neutral-200/80 dark:border-neutral-700/80 text-xs sm:text-sm">
+                  {product.description || "Authentic high-grade signature luxury piece from the Alike-ND boutique catalog."}
+                </p>
+              </div>
+
+              {/* Indian Statutory Marketplace Compliance Overview */}
+              <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/60 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between border-b border-amber-200/60 dark:border-amber-800/40 pb-1.5">
+                  <span className="text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase font-mono flex items-center gap-1.5">
+                    <span>🏛️</span> Indian Statutory Listing Compliance
+                  </span>
+                  <span className="text-[9px] font-mono text-amber-700/80 dark:text-amber-400/80">Rule 6, E-Commerce 2020</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5 text-[11px]">
+                  <div>
+                    <span className="text-neutral-400 dark:text-neutral-500 block text-[10px]">GST Rate:</span>
+                    <span className="font-bold text-neutral-900 dark:text-white">{product.gstRate !== undefined ? `${product.gstRate}% GST (Included)` : '18% GST (Default)'}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400 dark:text-neutral-500 block text-[10px]">HSN / SAC Code:</span>
+                    <span className="font-mono font-bold text-neutral-900 dark:text-white">{product.hsnCode || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400 dark:text-neutral-500 block text-[10px]">Country of Origin:</span>
+                    <span className="font-bold text-neutral-900 dark:text-white">{product.countryOfOrigin || 'India'}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400 dark:text-neutral-500 block text-[10px]">Pack / Net Qty:</span>
+                    <span className="font-bold text-neutral-900 dark:text-white">{product.packInfo || '1 Unit'}</span>
+                  </div>
+                </div>
+                {product.manufacturerDetails && (
+                  <div className="pt-1.5 border-t border-amber-200/40 dark:border-amber-800/30 text-[10px]">
+                    <span className="text-neutral-400 dark:text-neutral-500 block">Manufacturer / Importer:</span>
+                    <span className="text-neutral-800 dark:text-neutral-200 font-medium">{product.manufacturerDetails}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Wholesale Details if available */}
+              {product.isWholesale && (
+                <div className="p-3.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-800/60 rounded-xl space-y-1.5">
+                  <span className="text-[10px] font-bold text-purple-900 dark:text-purple-300 uppercase font-mono block">Wholesale Bulk Terms</span>
+                  <div className="flex justify-between items-center text-purple-950 dark:text-purple-200 font-medium text-xs">
+                    <span>Unit Rate: <strong>₹{product.wholesalePrice?.toLocaleString("en-IN") || 0}</strong></span>
+                    <span>Minimum Order: <strong>{product.wholesaleMinQty || 1} Units</strong></span>
+                  </div>
                 </div>
               )}
             </div>
-
-            {/* Wholesale Details if available */}
-            {product.isWholesale && (
-              <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl space-y-1">
-                <span className="text-[10px] font-bold text-purple-900 uppercase font-mono block">Wholesale Bulk Terms</span>
-                <div className="flex justify-between items-center text-purple-950 font-medium">
-                  <span>Unit Rate: <strong>₹{product.wholesalePrice?.toLocaleString("en-IN") || 0}</strong></span>
-                  <span>Minimum Order: <strong>{product.wholesaleMinQty || 1} Units</strong></span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200">
-          <button
-            type="button"
-            onClick={onClose}
-            className="ap-btn ap-btn-ghost text-xs"
-          >
-            Close Details
-          </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="ap-btn ap-btn-primary gap-1.5 text-xs bg-amber-600 hover:bg-amber-700"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Edit This Product</span>
-          </button>
+        {/* Sticky Footer Action Bar */}
+        <div className="px-5 sm:px-6 py-3.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/95 dark:bg-neutral-900/95 backdrop-blur-md flex items-center justify-between gap-3 shrink-0 sticky bottom-0 z-20">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500 font-mono">
+            <span>Product ID:</span>
+            <span className="text-neutral-700 dark:text-neutral-300 font-bold">{String(product._id || product.id)}</span>
+          </div>
+          <div className="flex items-center gap-3 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-700 shadow-xs cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+            >
+              Close Details
+            </button>
+            <button
+              type="button"
+              onClick={onEdit}
+              className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-600/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Edit This Product</span>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3609,17 +4118,20 @@ function DeleteProductModal({
   onClose,
   onConfirm,
 }: DeleteProductModalProps) {
-  const isMatch = confirmInput.trim().toLowerCase() === product.name.trim().toLowerCase();
+  const isMatch = 
+    confirmInput.trim().toLowerCase() === (product?.name || "").trim().toLowerCase() ||
+    confirmInput.trim().toUpperCase() === "DELETE" ||
+    confirmInput.trim() === String(product?.id || "");
 
-  return (
-    <div className="ap-modal-backdrop" onClick={onClose}>
-      <div className="ap-modal max-w-md" onClick={(e) => e.stopPropagation()}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div className="ap-modal max-w-md my-auto animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
           <div className="flex items-center gap-2 text-rose-600">
             <Trash2 className="w-5 h-5" />
             <h3 className="text-base font-bold text-neutral-900">Delete Product from Catalog</h3>
           </div>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900">
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -3640,14 +4152,23 @@ function DeleteProductModal({
           </div>
 
           <div className="space-y-1.5 pt-1">
-            <label className="block text-xs font-bold text-neutral-700">
-              Type <span className="font-mono bg-neutral-100 text-neutral-900 px-1.5 py-0.5 rounded border border-neutral-200 select-all">{product.name}</span> to confirm:
-            </label>
+            <div className="flex items-center justify-between text-xs font-bold text-neutral-700">
+              <span>
+                Type <span className="font-mono bg-neutral-100 text-neutral-900 px-1.5 py-0.5 rounded border border-neutral-200">{product.name}</span> or <span className="font-mono bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded">DELETE</span>:
+              </span>
+              <button
+                type="button"
+                onClick={() => onChangeInput(product.name)}
+                className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+              >
+                Auto-fill
+              </button>
+            </div>
             <input
               type="text"
               value={confirmInput}
               onChange={(e) => onChangeInput(e.target.value)}
-              placeholder="Type product name exactly to confirm..."
+              placeholder="Type product name or DELETE to confirm..."
               className="ap-input font-mono text-xs w-full"
               autoFocus
             />
@@ -3659,7 +4180,7 @@ function DeleteProductModal({
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="ap-btn ap-btn-ghost text-xs"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-700 hover:text-neutral-900 bg-white hover:bg-neutral-100 border border-neutral-300 shadow-xs cursor-pointer transition-all active:scale-95 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -3667,10 +4188,10 @@ function DeleteProductModal({
             type="button"
             onClick={onConfirm}
             disabled={isDeleting || !isMatch}
-            className={`ap-btn text-xs gap-1.5 text-white ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm ${
               isMatch && !isDeleting
-                ? "bg-rose-600 hover:bg-rose-700 cursor-pointer shadow-xs"
-                : "bg-neutral-300 cursor-not-allowed opacity-60"
+                ? "bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-rose-600/30 hover:scale-[1.02] active:scale-95"
+                : "bg-neutral-200 text-neutral-400 cursor-not-allowed border border-neutral-300/50"
             }`}
           >
             {isDeleting ? (
@@ -3685,7 +4206,8 @@ function DeleteProductModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3712,9 +4234,9 @@ function DeleteAdminModal({
   const isMatch = confirmInput.trim().toLowerCase() === admin.email.trim().toLowerCase();
   const isProtected = admin.email.toLowerCase() === "developer.alikend@gmail.com" || admin.email.toLowerCase() === "noyondey176@gmail.com";
 
-  return (
-    <div className="ap-modal-backdrop" onClick={onClose}>
-      <div className="ap-modal max-w-md" onClick={(e) => e.stopPropagation()}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div className="ap-modal max-w-md my-auto animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
           <div className="flex items-center gap-2 text-rose-600">
             <ShieldAlert className="w-5 h-5" />
@@ -3806,6 +4328,7 @@ function DeleteAdminModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

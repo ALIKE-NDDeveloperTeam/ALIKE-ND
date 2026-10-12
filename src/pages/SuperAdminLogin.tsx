@@ -1,5 +1,5 @@
 import { useState, FormEvent, useRef, useEffect } from 'react';
-import { Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Database, Sparkles, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Database, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { adminApi } from './adminApi';
 import Logo from '../components/Logo';
 
@@ -33,16 +33,6 @@ export default function SuperAdminLogin({
       emailInputRef.current?.focus();
     }, 150);
   }, []);
-
-  const handleFillCredentials = () => {
-    setError('');
-    setInfoMsg('Super Admin credentials loaded. You may also enter your custom master password.');
-    setEmail('developer.alikend@gmail.com');
-    setPassword('admin123');
-    setTimeout(() => {
-      passwordInputRef.current?.focus();
-    }, 50);
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -154,8 +144,8 @@ export default function SuperAdminLogin({
             </p>
           </div>
 
-          {/* Target Role Info Box & "Fill Credentials" Autofill */}
-          <div className="flex items-center justify-between px-4 py-2.5 rounded-full mb-5 text-xs bg-white/10 border border-white/15 backdrop-blur-md">
+          {/* Target Role Info Box */}
+          <div className="flex items-center justify-center px-4 py-2.5 rounded-full mb-5 text-xs bg-white/10 border border-white/15 backdrop-blur-md">
             <div className="flex items-center gap-2">
               <Database className="w-3.5 h-3.5 text-purple-300 flex-shrink-0" />
               <div className="text-[11px] leading-tight flex items-center gap-1.5">
@@ -165,15 +155,6 @@ export default function SuperAdminLogin({
                 </span>
               </div>
             </div>
-            <button
-              id="fill-superadmin-credentials-btn"
-              type="button"
-              onClick={handleFillCredentials}
-              className="px-3 py-1 rounded-full text-[11px] font-semibold bg-white/20 hover:bg-white/30 text-white border border-white/25 cursor-pointer transition-all flex items-center gap-1 active:scale-95"
-            >
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              <span>Fill Credentials</span>
-            </button>
           </div>
 
           {/* Info Notice */}

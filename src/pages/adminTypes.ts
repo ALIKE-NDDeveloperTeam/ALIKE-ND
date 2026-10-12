@@ -78,7 +78,7 @@ export interface Customer {
   phone?: string;
   country?: string;
   mobileNumber?: string;
-  tier: "Silver" | "Gold" | "Platinum";
+  tier: "VIP" | "Normal" | string;
   isBlocked?: boolean;
   verified?: boolean;
   ordersCount: number;
@@ -101,18 +101,34 @@ export interface AdminStats {
   };
 }
 
+export type AdminMinisterRole =
+  | "superadmin"      // হেড এডমিন (Head Admin)
+  | "main_admin"       // মেইন এডমিন (Main Admin)
+  | "sub_admin"        // সাব এডমিন (Sub Admin)
+  | "user_admin"       // ইউজার এডমিন (User Admin)
+  | "order_admin"      // অর্ডার ও ডেলিভারি এডমিন (Order Admin)
+  | "catalog_admin"    // প্রোডাক্ট ও ক্যাটালগ এডমিন (Catalog Admin)
+  | "seller_admin"     // সেলার ও ভেন্ডর এডমিন (Seller Admin)
+  | "finance_admin"    // ফাইন্যান্স ও কমিশন এডমিন (Finance Admin)
+  | "support_admin"    // হেল্পডেস্ক ও সাপোর্ট এডমিন (Support Admin)
+  | "admin"            // জেনারেল এডমিন (General Admin)
+  | string;
+
 export interface AdminProfile {
   _id: string;
   email: string;
   name: string;
-  role: "superadmin" | "admin";
+  role: AdminMinisterRole;
 }
 
 export interface AdminAccount {
   _id: string;
   email: string;
   name: string;
-  role: "superadmin" | "admin";
+  role: AdminMinisterRole;
+  phone?: string;
+  department?: string;
+  designation?: string;
   isActive?: boolean;
   createdAt?: string;
 }
@@ -156,8 +172,11 @@ export interface Banner {
   description?: string;
   buttonText?: string;
   link?: string;
+  linkUrl?: string;
   order: number;
   active: boolean;
+  isActive?: boolean;
+  isCenterFeatured?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

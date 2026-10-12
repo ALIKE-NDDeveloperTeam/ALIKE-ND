@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import Logo from './Logo';
-<<<<<<< HEAD
 import FeaturesSection from './FeaturesSection';
 import { 
-=======
-import { 
-  ShieldCheck, 
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   Mail, 
   Send, 
   ChevronRight, 
@@ -123,8 +118,8 @@ export default function Footer({
     { label: 'Grievance Redressal', icon: Scale, action: () => onNavigate('grievance_policy') },
     { label: 'Terms & Conditions', icon: FileText, action: () => onNavigate('terms_conditions') },
     { label: 'Privacy Policy', icon: Shield, action: () => onNavigate('privacy_policy') },
-    { label: 'FAQs & Help Center', icon: HelpCircle, action: () => onNavigate('messenger') },
-    { label: 'Contact Us', icon: Headphones, action: () => onNavigate('messenger') }
+    { label: 'FAQs & Help Center', icon: HelpCircle, action: () => onNavigate('support') },
+    { label: 'Contact Us & Hotlines', icon: Headphones, action: () => onNavigate('support') }
   ];
 
   return (
@@ -351,111 +346,7 @@ export default function Footer({
         </div>
 
         {/* Feature / Trust Badges Card */}
-<<<<<<< HEAD
         <FeaturesSection isLightMode={isLightMode} className="!my-0 !px-0" />
-=======
-        <div className={`p-5 sm:p-6 rounded-2xl border transition-all ${
-          isLightMode 
-            ? 'bg-white/80 border-[#E5DAC4] shadow-[0_4px_16px_rgba(0,0,0,0.04)] backdrop-blur-xs' 
-            : 'bg-gradient-to-r from-[#121E42]/90 via-[#15234D]/90 to-[#121E42]/90 border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
-        }`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            
-            {/* Feature 1: Free Shipping */}
-            <div className={`group/badge flex items-center gap-3.5 p-3 rounded-xl transition-all duration-300 hover:-translate-y-1 ${
-              isLightMode ? 'hover:bg-amber-500/5' : 'hover:bg-white/5'
-            }`}>
-              <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-xl bg-amber-500/20 blur-sm group-hover/badge:scale-120 transition-transform opacity-70" />
-                <div className="relative z-10 w-full h-full rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 text-white flex items-center justify-center shadow-md ring-1 ring-inset ring-white/30">
-                  <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/35 to-transparent pointer-events-none rounded-t-xl" />
-                  <Truck className="w-5 h-5 relative z-10 stroke-[2.25] filter drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.35)]" />
-                </div>
-              </div>
-              <div className="space-y-0.5 min-w-0">
-                <h5 className={`text-xs font-black tracking-wider uppercase ${
-                  isLightMode ? 'text-[#0F1A3C]' : 'text-white'
-                }`}>
-                  FREE SHIPPING
-                </h5>
-                <p className={`text-xs truncate ${isLightMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                  Complimentary on orders over ₹499
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 2: Secure Payment */}
-            <div className={`group/badge flex items-center gap-3.5 p-3 rounded-xl transition-all duration-300 hover:-translate-y-1 ${
-              isLightMode ? 'hover:bg-emerald-500/5' : 'hover:bg-white/5'
-            }`}>
-              <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-xl bg-emerald-500/20 blur-sm group-hover/badge:scale-120 transition-transform opacity-70" />
-                <div className="relative z-10 w-full h-full rounded-xl bg-gradient-to-br from-emerald-400 via-emerald-600 to-teal-800 text-white flex items-center justify-center shadow-md ring-1 ring-inset ring-white/30">
-                  <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/35 to-transparent pointer-events-none rounded-t-xl" />
-                  <ShieldCheck className="w-5 h-5 relative z-10 stroke-[2.25] filter drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.35)]" />
-                </div>
-              </div>
-              <div className="space-y-0.5 min-w-0">
-                <h5 className={`text-xs font-black tracking-wider uppercase ${
-                  isLightMode ? 'text-[#0F1A3C]' : 'text-white'
-                }`}>
-                  SECURE PAYMENT
-                </h5>
-                <p className={`text-xs truncate ${isLightMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                  256-bit bank-grade SSL encryption
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 3: Easy Returns */}
-            <div className={`group/badge flex items-center gap-3.5 p-3 rounded-xl transition-all duration-300 hover:-translate-y-1 ${
-              isLightMode ? 'hover:bg-sky-500/5' : 'hover:bg-white/5'
-            }`}>
-              <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-xl bg-sky-500/20 blur-sm group-hover/badge:scale-120 transition-transform opacity-70" />
-                <div className="relative z-10 w-full h-full rounded-xl bg-gradient-to-br from-sky-400 via-blue-600 to-indigo-800 text-white flex items-center justify-center shadow-md ring-1 ring-inset ring-white/30">
-                  <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/35 to-transparent pointer-events-none rounded-t-xl" />
-                  <RotateCcw className="w-5 h-5 relative z-10 stroke-[2.25] filter drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.35)]" />
-                </div>
-              </div>
-              <div className="space-y-0.5 min-w-0">
-                <h5 className={`text-xs font-black tracking-wider uppercase ${
-                  isLightMode ? 'text-[#0F1A3C]' : 'text-white'
-                }`}>
-                  EASY RETURNS
-                </h5>
-                <p className={`text-xs truncate ${isLightMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                  Hassle-free 30-day return policy
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 4: 24/7 Support */}
-            <div className={`group/badge flex items-center gap-3.5 p-3 rounded-xl transition-all duration-300 hover:-translate-y-1 ${
-              isLightMode ? 'hover:bg-purple-500/5' : 'hover:bg-white/5'
-            }`}>
-              <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-xl bg-purple-500/20 blur-sm group-hover/badge:scale-120 transition-transform opacity-70" />
-                <div className="relative z-10 w-full h-full rounded-xl bg-gradient-to-br from-purple-400 via-violet-600 to-indigo-800 text-white flex items-center justify-center shadow-md ring-1 ring-inset ring-white/30">
-                  <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/35 to-transparent pointer-events-none rounded-t-xl" />
-                  <Headphones className="w-5 h-5 relative z-10 stroke-[2.25] filter drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.35)]" />
-                </div>
-              </div>
-              <div className="space-y-0.5 min-w-0">
-                <h5 className={`text-xs font-black tracking-wider uppercase ${
-                  isLightMode ? 'text-[#0F1A3C]' : 'text-white'
-                }`}>
-                  24/7 SUPPORT
-                </h5>
-                <p className={`text-xs truncate ${isLightMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                  Dedicated concierge advisors
-                </p>
-              </div>
-            </div>
-
-          </div>
-        </div>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
         {/* Bottom Hairline Divider */}
         <div className={`h-px w-full ${isLightMode ? 'bg-[#E5DAC4]' : 'bg-gradient-to-r from-transparent via-white/10 to-transparent'}`} />
@@ -463,29 +354,11 @@ export default function Footer({
         {/* Bottom Copyright & Payment Badges Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
           
-<<<<<<< HEAD
           {/* Left: Copyright */}
           <div className="text-center md:text-left text-neutral-400 text-xs">
             <p className={isLightMode ? 'text-neutral-600' : 'text-neutral-400'}>
               © 2026 <strong className={isLightMode ? 'text-[#0F1A3C]' : 'text-white'}>ALIKE-ND</strong>. All rights reserved. Crafted with excellence for discerning collectors.
             </p>
-=======
-          {/* Left: Copyright & Discreet Admin Portals */}
-          <div className="text-center md:text-left flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-1.5 text-neutral-400 text-xs">
-            <p className={isLightMode ? 'text-neutral-600' : 'text-neutral-400'}>
-              © 2026 <strong className={isLightMode ? 'text-[#0F1A3C]' : 'text-white'}>ALIKE-ND</strong>. All rights reserved. Crafted with excellence for discerning collectors.
-            </p>
-            <span className="hidden sm:inline text-neutral-500">·</span>
-            <button
-              type="button"
-              onClick={() => onNavigate('superadmin_login')}
-              className="hover:text-[#F5A623] transition-colors inline-flex items-center gap-1 font-medium cursor-pointer"
-              title="Super Administrator Master Portal"
-            >
-              <Crown className="w-3 h-3 text-[#F5A623]" />
-              <span className={isLightMode ? 'text-neutral-700 hover:text-[#0F1A3C]' : 'text-neutral-400 hover:text-white'}>Admin Portal</span>
-            </button>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           </div>
 
           {/* Center/Right: We Accept Payment Cards */}

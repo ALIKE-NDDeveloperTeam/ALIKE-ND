@@ -314,6 +314,55 @@ body.light-mode footer {
   color: #18181B !important;
 }
 
+/* ========================================================
+   HERO BANNER CONTRAST & VISUAL ISOLATION
+   Ensures text on dark hero overlays is always bright, crisp, and high-contrast
+   ======================================================== */
+#hero-carousel-root,
+.hero-banner-isolate,
+.hero-banner-isolate h1,
+.hero-banner-isolate h2,
+.hero-banner-isolate h3,
+.hero-banner-isolate h4,
+.hero-banner-isolate p,
+.hero-banner-isolate span,
+body.light-mode #hero-carousel-root .text-white,
+body.light-mode .hero-banner-isolate .text-white,
+body.light-mode #hero-carousel-root h3,
+body.light-mode .hero-banner-isolate h3,
+body.light-mode #hero-carousel-root h4,
+body.light-mode .hero-banner-isolate h4 {
+  color: #FFFFFF !important;
+}
+
+body.light-mode #hero-carousel-root .hero-text-gold,
+body.light-mode .hero-banner-isolate .hero-text-gold,
+#hero-carousel-root .hero-text-gold,
+.hero-banner-isolate .hero-text-gold {
+  color: #F5A623 !important;
+}
+
+body.light-mode #hero-carousel-root .hero-text-amber,
+body.light-mode .hero-banner-isolate .hero-text-amber,
+#hero-carousel-root .hero-text-amber,
+.hero-banner-isolate .hero-text-amber {
+  color: #FBBF24 !important;
+}
+
+body.light-mode #hero-carousel-root .hero-text-muted,
+body.light-mode .hero-banner-isolate .hero-text-muted,
+#hero-carousel-root .hero-text-muted,
+.hero-banner-isolate .hero-text-muted {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+body.light-mode #hero-carousel-root .hero-text-dim,
+body.light-mode .hero-banner-isolate .hero-text-dim,
+#hero-carousel-root .hero-text-dim,
+.hero-banner-isolate .hero-text-dim {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
 body.light-mode footer h4 {
   color: #0F172A !important;
 }
@@ -719,6 +768,72 @@ body.light-mode .premium-nav-icon-btn:hover {
 .animate-heart-pop {
   animation: heartPop 0.48s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   transform-origin: center center;
+}
+
+/* ==========================================================================
+   Modern Luxury PageLoader Animations
+   ========================================================================== */
+
+@keyframes orbitSpinClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orbitSpinCounter {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes glowAuraPulse {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes shimmerBeamSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+@keyframes microFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-orbit-cw {
+  animation: orbitSpinClockwise 3.2s linear infinite;
+}
+
+.animate-orbit-ccw {
+  animation: orbitSpinCounter 4.8s linear infinite;
+}
+
+.animate-glow-aura {
+  animation: glowAuraPulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-shimmer-beam {
+  animation: shimmerBeamSlide 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-micro-fade-in {
+  animation: microFadeIn 0.3s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-orbit-cw,
+  .animate-orbit-ccw,
+  .animate-glow-aura,
+  .animate-shimmer-beam,
+  .animate-heart-pop {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 

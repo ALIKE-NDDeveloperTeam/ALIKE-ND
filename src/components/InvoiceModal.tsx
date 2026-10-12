@@ -1,9 +1,5 @@
 import React, { useRef } from 'react';
-<<<<<<< HEAD
 import { Printer, Download, ShieldCheck, Heart } from 'lucide-react';
-=======
-import { Printer, Download, ShieldCheck } from 'lucide-react';
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import { Order } from '../types';
 import Logo from './Logo';
 import GlassCloseButton from './GlassCloseButton';
@@ -474,7 +470,6 @@ export default function InvoiceModal({ order, onClose, showToast }: InvoiceModal
                     ₹{order.total.toLocaleString('en-IN')}
                   </span>
                 </div>
-<<<<<<< HEAD
 
                 {/* Custom Thank You Note under Invoice Bill */}
                 <div className="p-2.5 bg-amber-50/80 border border-amber-200/80 rounded-lg text-center flex items-center justify-center space-x-1.5 shadow-xs">
@@ -483,8 +478,6 @@ export default function InvoiceModal({ order, onClose, showToast }: InvoiceModal
                     ALIKE ND te shopping korar jonno Thanks, abar asben shopping korte!
                   </p>
                 </div>
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
               </div>
             </div>
 

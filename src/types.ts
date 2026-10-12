@@ -17,10 +17,7 @@ export interface Product {
   images?: string[];
   category: string;
   subCategory?: string;
-<<<<<<< HEAD
   audience?: 'men' | 'women' | 'boys' | 'girls' | 'kids' | 'unisex' | string;
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   eligibleFor20MinDelivery?: boolean;
   badge?: 'SALE' | 'HOT' | 'NEW' | 'TRENDING' | 'LIMITED' | string;
   isFlashSale?: boolean;
@@ -54,6 +51,21 @@ export interface CategoryItem {
   };
   eligibleFor20MinDelivery?: boolean;
   subCategories?: string[];
+}
+
+export interface DynamicCategory {
+  _id: string;
+  id?: string;
+  titleEn: string;
+  titleBn: string;
+  imageUrl: string;
+  badgeText?: string;
+  badgeColor?: string;
+  redirectUrl: string;
+  order: number;
+  isActive: boolean;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface SellerProfile {
@@ -209,8 +221,11 @@ export interface Banner {
   description?: string;
   buttonText?: string;
   link?: string;
+  linkUrl?: string;
   order: number;
   active: boolean;
+  isActive?: boolean;
+  isCenterFeatured?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

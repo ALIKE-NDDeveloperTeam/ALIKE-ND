@@ -35,6 +35,7 @@ const AIRecommendations = lazy(() => import('./pages/AIRecommendations'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
 const StaffAdminLogin = lazy(() => import('./pages/StaffAdminLogin'));
+const SupportCenter = lazy(() => import('./pages/SupportCenter'));
 const SearchModal = lazy(() => import('./components/SearchModal'));
 import { adminApi } from './pages/adminApi';
 
@@ -125,6 +126,7 @@ export function parseRouteFromUrl(): ParsedRoute {
   if (pathname === '/seller_register' || pathname === '/seller-register') return { view: 'seller_register', category: 'all', searchQuery: '', productId: null };
   if (pathname === '/seller_dashboard' || pathname === '/seller-dashboard') return { view: 'seller_dashboard', category: 'all', searchQuery: '', productId: null };
   if (pathname === '/notifications') return { view: 'notifications', category: 'all', searchQuery: '', productId: null };
+  if (pathname === '/support' || pathname === '/help' || pathname === '/customer-care') return { view: 'support', category: 'all', searchQuery: '', productId: null };
   if (pathname === '/ai_recs' || pathname === '/ai-recs') return { view: 'ai_recs', category: 'all', searchQuery: '', productId: null };
   if (pathname === '/superadmin_login') return { view: 'superadmin_login', category: 'all', searchQuery: '', productId: null };
   if (pathname === '/staffadmin_login') return { view: 'staffadmin_login', category: 'all', searchQuery: '', productId: null };
@@ -188,6 +190,7 @@ export function buildRouteUrl(
   if (view === 'seller_register') return '/seller_register';
   if (view === 'seller_dashboard') return '/seller_dashboard';
   if (view === 'notifications') return '/notifications';
+  if (view === 'support' || view === 'help') return '/support';
   if (view === 'ai_recs') return '/ai_recs';
   if (view === 'superadmin_login') return '/superadmin_login';
   if (view === 'staffadmin_login') return '/staffadmin_login';
@@ -197,37 +200,32 @@ export function buildRouteUrl(
 
 import { X, ShoppingCart, Star, Heart, ArrowRight } from 'lucide-react';
 import GlassCloseButton from './components/GlassCloseButton';
-<<<<<<< HEAD
 import FavoriteButton from './components/FavoriteButton';
+import QuickViewModal from './components/QuickViewModal';
 import ComparisonCorridorBar from './components/ComparisonCorridorBar';
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
+import PageLoader from './components/PageLoader';
 
 const PageLoadingFallback = () => (
-  <div className="w-full min-h-[50vh] flex flex-col items-center justify-center py-20 px-4">
-    <div className="relative w-10 h-10">
-      <div className="absolute inset-0 rounded-full border-2 border-neutral-700/30"></div>
-      <div className="absolute inset-0 rounded-full border-2 border-t-[#FF1878] border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-    </div>
-    <span className="mt-4 text-[11px] font-mono tracking-widest text-neutral-400 uppercase animate-pulse">Loading Atelier Segment...</span>
-  </div>
+  <PageLoader
+    variant="inline"
+    label="Curating Atelier Segment..."
+    subLabel="ALIKE-ND BESPOKE"
+  />
 );
 
-<<<<<<< HEAD
 const SearchModalLoadingFallback = () => (
   <div
     id="search-experience-modal-overlay-loading"
     className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 backdrop-blur-xl bg-black/75 animate-fade-in"
     aria-label="Loading search dialog"
   >
-    <div className="w-full max-w-3xl my-auto rounded-2xl md:rounded-3xl border border-[#D3E8ED]/20 bg-[#070D1E] shadow-[0_25px_70px_rgba(0,0,0,0.85)] p-12 flex flex-col items-center justify-center min-h-[260px] text-center">
-      <div className="relative w-10 h-10">
-        <div className="absolute inset-0 rounded-full border-2 border-neutral-700/40"></div>
-        <div className="absolute inset-0 rounded-full border-2 border-t-[#FF1878] border-r-[#F5A623] border-b-transparent border-l-transparent animate-spin"></div>
-      </div>
-      <span className="mt-4 text-[11px] font-mono tracking-widest text-neutral-400 uppercase animate-pulse">
-        Opening Atelier Search Catalog...
-      </span>
+    <div className="w-full max-w-xl my-auto rounded-3xl border border-white/10 bg-[#070D1E]/95 shadow-[0_25px_70px_rgba(0,0,0,0.85)] p-8 flex flex-col items-center justify-center min-h-[260px] text-center">
+      <PageLoader
+        variant="inline"
+        size="sm"
+        label="Opening Atelier Search Catalog..."
+        subLabel="CURATED ARCHIVE"
+      />
     </div>
   </div>
 );
@@ -235,21 +233,18 @@ const SearchModalLoadingFallback = () => (
 const MessengerLoadingFallback = () => (
   <div
     id="chat-widget-loading"
-    className="fixed bottom-6 right-6 z-[90] w-[380px] max-w-[calc(100vw-32px)] h-[min(580px,calc(100vh-100px))] rounded-3xl overflow-hidden shadow-2xl border-2 border-solid border-[#D1D1D1]/40 flex flex-col items-center justify-center bg-white dark:bg-[#070D1E] animate-slide-up"
+    className="fixed bottom-6 right-6 z-[90] w-[380px] max-w-[calc(100vw-32px)] h-[min(580px,calc(100vh-100px))] rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col items-center justify-center bg-white dark:bg-[#070D1E] animate-slide-up"
     aria-label="Loading live chat concierge"
   >
-    <div className="relative w-8 h-8">
-      <div className="absolute inset-0 rounded-full border-2 border-neutral-300 dark:border-white/10"></div>
-      <div className="absolute inset-0 rounded-full border-2 border-t-[#FF1878] border-r-[#F5A623] border-b-transparent border-l-transparent animate-spin"></div>
-    </div>
-    <span className="mt-3 text-[11px] font-mono tracking-widest text-neutral-500 dark:text-neutral-400 uppercase animate-pulse">
-      Connecting Concierge...
-    </span>
+    <PageLoader
+      variant="inline"
+      size="sm"
+      label="Connecting Concierge..."
+      subLabel="24/7 LIVE SUPPORT"
+    />
   </div>
 );
 
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 export default function App() {
 
   // Core Persistent State with database-backed session validation
@@ -445,7 +440,6 @@ export default function App() {
 
   // 2.1 Quick View & 2.5 Product Compare state layers
   const [comparedProducts, setComparedProducts] = useState<Product[]>([]);
-<<<<<<< HEAD
   const [isCompareBarDismissed, setIsCompareBarDismissed] = useState<boolean>(false);
   const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
@@ -466,12 +460,6 @@ export default function App() {
       setSelectedColor(initialColors[0]);
     }
   }, [quickViewProduct]);
-=======
-  const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
-  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string>('M');
-  const [selectedColor, setSelectedColor] = useState<string>('Standard Gold');
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
   // App Routing Visibility & URL Navigation state
   const [currentAdminUser, setCurrentAdminUser] = useState<{ _id?: string; name: string; email: string; role: string } | null>(null);
@@ -694,8 +682,17 @@ export default function App() {
       setOrders([]);
     }
 
-    // 3. Fetch real orders from database for this specific user
-    fetch(`/api/orders/user?email=${encodeURIComponent(cleanEmail)}`)
+    // 3. Fetch real orders from database for this specific user (authenticated with JWT to prevent IDOR)
+    const userToken = localStorage.getItem("alike_user_token");
+    if (!userToken) {
+      return;
+    }
+
+    fetch("/api/orders/user", {
+      headers: {
+        Authorization: `Bearer ${userToken}`,
+      },
+    })
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {
@@ -826,10 +823,7 @@ export default function App() {
         return;
       }
       setComparedProducts([...comparedProducts, product]);
-<<<<<<< HEAD
       setIsCompareBarDismissed(false);
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
       showToast(`Added "${product.name}" to compare matrix.`, 'success');
     }
   };
@@ -1005,9 +999,34 @@ export default function App() {
         <LoginModal
           isOpen={loginOpen}
           onClose={() => setLoginOpen(false)}
+          onNavigate={handleNavigate}
           onLoginSuccess={(userData, isNewRegistration) => {
-            // Setup active session tied to MongoDB document
             const cleanEmail = userData.email.toLowerCase();
+
+            // If user has Administrator privileges, log directly into Admin Panel
+            if ((userData as any).isAdmin || (userData as any).adminToken) {
+              const adminRole = (userData as any).adminRole || 'superadmin';
+              const adminObj = {
+                _id: userData._id || 'admin_user',
+                email: userData.email,
+                name: userData.name || 'Administrator',
+                role: adminRole,
+              };
+              setCurrentAdminUser(adminObj);
+              setUser({
+                _id: userData._id,
+                name: userData.name,
+                email: userData.email,
+                phone: userData.phone,
+                tier: 'Platinum',
+              });
+              setLoginOpen(false);
+              handleNavigate('admin');
+              showToast(`Welcome Master Administrator, ${userData.name}! Opening Admin Console...`, 'success');
+              return;
+            }
+
+            // Setup active customer session tied to MongoDB document
             setUser({
               _id: userData._id,
               name: userData.name,
@@ -1063,22 +1082,12 @@ export default function App() {
 
       {/* Global Search Modal Experience */}
       {searchModalOpen && (
-<<<<<<< HEAD
         <Suspense fallback={<SearchModalLoadingFallback />}>
-=======
-        <Suspense fallback={null}>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           <SearchModal
             isOpen={searchModalOpen}
             onClose={() => setSearchModalOpen(false)}
             onNavigate={handleNavigate}
             onSearch={(q, cat) => {
-              const termLower = q.trim().toLowerCase();
-              if (termLower === 'admin' || termLower === 'superadmin') {
-                setSearchQuery('');
-                handleNavigate('admin');
-                return;
-              }
               setSearchQuery(q);
               if (cat) setSelectedCategory(cat);
               handleNavigate('category_search', cat || 'all');
@@ -1138,12 +1147,6 @@ export default function App() {
           setLoginOpen(true);
         }}
         onSearch={(q) => {
-          const trimmed = q.trim().toLowerCase();
-          if (trimmed === 'admin' || trimmed === 'superadmin') {
-            setSearchQuery('');
-            handleNavigate('admin');
-            return;
-          }
           setSearchQuery(q);
           if (typeof window !== 'undefined') {
             const targetUrl = buildRouteUrl('search', selectedCategory, q, null);
@@ -1322,6 +1325,16 @@ export default function App() {
           <JobsPortal
             jobs={JOBS}
             showToast={showToast}
+          />
+        )}
+
+        {currentView === 'support' && (
+          <SupportCenter
+            user={user}
+            onNavigate={handleNavigate}
+            onOpenAuthModal={() => setLoginOpen(true)}
+            showToast={showToast}
+            isLightMode={isLightMode}
           />
         )}
 
@@ -1530,293 +1543,18 @@ export default function App() {
       />
 
       {/* 2.1 Product Quick View Modal */}
-      {quickViewProduct && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto animate-fade-in" onClick={() => setQuickViewProduct(null)}>
-          <div className={`border-2 border-solid rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative p-6 md:p-8 flex flex-col md:flex-row gap-8 scale-in animate-page-in ${
-            isLightMode ? 'bg-white border-[#EADFC9] text-[#0F1A3C]' : 'bg-[#0A0F24] border-[#F5A623]/30 text-white'
-          }`} onClick={(e) => e.stopPropagation()}>
-            
-            {/* Close button */}
-            <GlassCloseButton
-              onClick={() => setQuickViewProduct(null)}
-              className="absolute top-4 right-4 z-10"
-              size="md"
-              title="Close Quick View"
-            />
-
-            {/* Image section */}
-            <div className={`w-full md:w-1/2 aspect-square rounded-2xl overflow-hidden border relative group/quickimg ${
-              isLightMode ? 'bg-neutral-100 border-[#EADFC9]' : 'bg-[#060A17] border-[#162744]'
-            }`}>
-              <img
-                src={quickViewProduct.image}
-                alt={quickViewProduct.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover/quickimg:scale-105"
-              />
-              <div className="absolute top-3 right-3 z-10">
-<<<<<<< HEAD
-                <FavoriteButton
-                  id={`wishlist-btn-quickview-${quickViewProduct.id}`}
-                  isLiked={wishlist.some((p) => p.id === quickViewProduct.id)}
-                  onToggle={(e) => {
-                    e.stopPropagation();
-                    handleToggleWishlist(quickViewProduct);
-                  }}
-                  title={wishlist.some((p) => p.id === quickViewProduct.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                />
-=======
-                <button
-                  id={`wishlist-btn-quickview-${quickViewProduct.id}`}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleWishlist(quickViewProduct);
-                  }}
-                  className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md active:scale-90 cursor-pointer product-action-btn flex items-center justify-center group/heartbtn ${
-                    wishlist.some((p) => p.id === quickViewProduct.id)
-                      ? 'bg-rose-500/20 dark:bg-rose-950/50 border border-rose-400/60 text-rose-500 shadow-[0_2px_12px_rgba(244,63,94,0.3)] hover:bg-rose-500/30'
-                      : 'bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/85 border border-white/70 dark:border-white/20 text-neutral-600 dark:text-white/80 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-300/70 dark:hover:border-rose-500/40 hover:shadow-[0_2px_12px_rgba(244,63,94,0.2)]'
-                  }`}
-                  title={wishlist.some((p) => p.id === quickViewProduct.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                >
-                  <Heart
-                    className={`w-3.5 h-3.5 transition-all duration-200 ${
-                      wishlist.some((p) => p.id === quickViewProduct.id)
-                        ? 'fill-red-500 text-red-500 hover:text-red-600 animate-heart-pop'
-                        : 'group-hover/heartbtn:scale-115 group-hover/heartbtn:text-rose-500 stroke-[2.2]'
-                    }`}
-                  />
-                </button>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
-              </div>
-            </div>
-
-            {/* Info details */}
-            <div className="w-full md:w-1/2 flex flex-col justify-between py-1 space-y-4">
-              <div>
-                <span className="text-[10px] text-amber-600 dark:text-[#F5A623] uppercase tracking-widest font-black font-mono">
-                  {quickViewProduct.brand}
-                </span>
-                <h2 className={`text-xl md:text-2xl font-black leading-snug mt-1.5 font-sans ${
-                  isLightMode ? 'text-[#0F1A3C]' : 'text-white'
-                }`}>
-                  {quickViewProduct.name}
-                </h2>
-
-                <div className="flex items-center gap-2 mt-2.5">
-                  <div className={`flex items-center px-2.5 py-0.5 border border-solid rounded-md ${
-                    isLightMode ? 'bg-amber-500/10 border-amber-500/25 text-[#0F1A3C]' : 'bg-[#F5A623]/10 border-[#F5A623]/30 text-white'
-                  }`}>
-                    <Star className="w-3.5 h-3.5 fill-[#F5A623] text-[#F5A623]" />
-                    <span className={`text-xs font-bold ml-1.5 ${isLightMode ? 'text-[#0F1A3C]' : 'text-white'}`}>{quickViewProduct.rating.toFixed(1)}</span>
-                  </div>
-                  <span className="text-neutral-400 text-xs">·</span>
-                  <span className={`text-xs font-medium ${isLightMode ? 'text-neutral-500' : 'text-neutral-400'}`}>({quickViewProduct.reviewsCount} premium reviews)</span>
-                </div>
-
-                <div className={`mt-4 pt-3 border-t space-y-1 ${isLightMode ? 'border-[#EADFC9]' : 'border-[#162744]'}`}>
-                  <p className="text-[10px] text-amber-700/80 dark:text-[#F5A623]/80 uppercase font-mono tracking-widest font-extrabold">Atelier Description</p>
-                  <p className={`text-xs leading-relaxed font-sans mt-0.5 ${isLightMode ? 'text-neutral-600' : 'text-neutral-300'}`}>
-                    {quickViewProduct.description}
-                  </p>
-                </div>
-              </div>
-
-              {/* Options selection */}
-<<<<<<< HEAD
-              {(() => {
-                const productSizes = quickViewProduct.sizes && quickViewProduct.sizes.length > 0
-                  ? quickViewProduct.sizes
-                  : ['Fits All'];
-                const productColors = quickViewProduct.colors && quickViewProduct.colors.length > 0
-                  ? quickViewProduct.colors
-                  : ['Standard'];
-
-                const isGenericDefaultSize = (s: string) => {
-                  const norm = s.trim().toLowerCase();
-                  return ['standard', 'fits all', 'one size', 'free size', 'regular', 'default', 'n/a', 'none'].includes(norm);
-                };
-
-                const hasMeaningfulSizes = productSizes.length > 1 || (productSizes.length === 1 && !isGenericDefaultSize(productSizes[0]));
-
-                const isGenericDefaultColor = (c: string) => {
-                  const norm = c.trim().toLowerCase();
-                  return ['standard', 'default', 'n/a', 'none', 'regular'].includes(norm);
-                };
-
-                const hasMeaningfulColors = productColors.length > 1 || (productColors.length === 1 && !isGenericDefaultColor(productColors[0]));
-
-                if (!hasMeaningfulSizes && !hasMeaningfulColors) return null;
-
-                return (
-                  <div className={`space-y-4 pt-4 border-t ${isLightMode ? 'border-[#EADFC9]' : 'border-[#162744]'}`}>
-                    {hasMeaningfulSizes && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] text-amber-700/80 dark:text-[#F5A623]/80 uppercase font-mono tracking-widest font-extrabold">
-                            Size
-                          </p>
-                          {selectedSize && (
-                            <span className={`text-[11px] font-semibold ${isLightMode ? 'text-neutral-600' : 'text-neutral-300'}`}>
-                              {selectedSize}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {productSizes.map((size) => (
-                            <button
-                              key={size}
-                              type="button"
-                              onClick={() => setSelectedSize(size)}
-                              className={`px-3.5 py-1 text-xs font-bold rounded-lg border border-solid transition-all cursor-pointer ${
-                                selectedSize === size
-                                  ? 'border-2 border-[#F5A623] bg-[#F5A623]/15 text-[#B48C28] dark:text-[#F5A623] font-black shadow-xs'
-                                  : isLightMode
-                                  ? 'border-[#EADFC9] bg-white text-gray-700 hover:border-amber-400'
-                                  : 'border-[#162744] bg-[#0B1B32] text-slate-300 hover:border-[#F5A623]/40'
-                              }`}
-                            >
-                              {size}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {hasMeaningfulColors && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] text-amber-700/80 dark:text-[#F5A623]/80 uppercase font-mono tracking-widest font-extrabold">
-                            Color
-                          </p>
-                          {selectedColor && (
-                            <span className={`text-[11px] font-semibold ${isLightMode ? 'text-neutral-600' : 'text-neutral-300'}`}>
-                              {selectedColor}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {productColors.map((color) => (
-                            <button
-                              key={color}
-                              type="button"
-                              onClick={() => setSelectedColor(color)}
-                              className={`px-3 py-1 text-xs font-bold rounded-lg border border-solid transition-all cursor-pointer ${
-                                selectedColor === color
-                                  ? 'border-2 border-[#F5A623] bg-[#F5A623]/15 text-[#B48C28] dark:text-[#F5A623] font-black shadow-xs'
-                                  : isLightMode
-                                  ? 'border-[#EADFC9] bg-white text-gray-700 hover:border-amber-400'
-                                  : 'border-[#162744] bg-[#0B1B32] text-slate-300 hover:border-[#F5A623]/40'
-                              }`}
-                            >
-                              {color}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-=======
-              <div className={`space-y-4 pt-4 border-t ${isLightMode ? 'border-[#EADFC9]' : 'border-[#162744]'}`}>
-                <div className="space-y-2">
-                  <p className="text-[10px] text-amber-700/80 dark:text-[#F5A623]/80 uppercase font-mono tracking-widest font-extrabold">Grade Choice</p>
-                  <div className="flex gap-2">
-                    {['S', 'M', 'L', 'XL'].map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => setSelectedSize(size)}
-                        className={`px-3.5 py-1 text-xs font-bold rounded-lg border border-solid transition-all cursor-pointer ${
-                          selectedSize === size
-                            ? 'border-2 border-[#F5A623] bg-[#F5A623]/15 text-[#B48C28] dark:text-[#F5A623] font-black shadow-xs'
-                            : isLightMode
-                            ? 'border-[#EADFC9] bg-white text-gray-700 hover:border-amber-400'
-                            : 'border-[#162744] bg-[#0B1B32] text-slate-300 hover:border-[#F5A623]/40'
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-[10px] text-amber-700/80 dark:text-[#F5A623]/80 uppercase font-mono tracking-widest font-extrabold">Surface Polish</p>
-                  <div className="flex gap-2">
-                    {['Standard Gold', 'Sterling Silver', 'Imperial Amber'].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setSelectedColor(color)}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg border border-solid transition-all cursor-pointer ${
-                          selectedColor === color
-                            ? 'border-2 border-[#F5A623] bg-[#F5A623]/15 text-[#B48C28] dark:text-[#F5A623] font-black shadow-xs'
-                            : isLightMode
-                            ? 'border-[#EADFC9] bg-white text-gray-700 hover:border-amber-400'
-                            : 'border-[#162744] bg-[#0B1B32] text-slate-300 hover:border-[#F5A623]/40'
-                        }`}
-                      >
-                        {color}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
-
-              {/* Price block */}
-              <div className={`pt-4 border-t ${isLightMode ? 'border-[#EADFC9]' : 'border-[#162744]'}`}>
-                <div className="flex items-baseline gap-2.5 mb-3 flex-wrap">
-                  <span className={`text-2xl font-black ${isLightMode ? 'text-[#0F1A3C]' : 'text-white'}`}>
-                    ₹{quickViewProduct.price.toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-sm text-neutral-400 dark:text-neutral-500 line-through font-medium">
-                    ₹{quickViewProduct.mrp.toLocaleString('en-IN')}
-                  </span>
-                  {quickViewProduct.mrp > quickViewProduct.price && (
-                    <span className="bg-gradient-to-r from-[#F5A623] to-[#D4AF37] text-[#0A0F24] text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs uppercase tracking-wider">
-                      -{Math.round(((quickViewProduct.mrp - quickViewProduct.price) / quickViewProduct.mrp) * 100)}% OFF
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex gap-3 sm:gap-4">
-                  <button
-                    id={`quickview-add-to-cart-${quickViewProduct.id}`}
-                    onClick={() => {
-                      handleAddToCart(quickViewProduct, 1, selectedColor, selectedSize);
-                      setQuickViewProduct(null);
-                    }}
-                    className="flex-grow py-3 px-4 bg-[#0F1A3C] hover:bg-[#162744] text-white border border-[#F5A623]/50 hover:border-[#F5A623] font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95 group/btn"
-                  >
-                    <ShoppingCart className="w-4 h-4 text-[#F5A623] transition-transform group-hover/btn:scale-110" />
-                    <span>Reserve Signature Copy</span>
-                  </button>
-                  <button
-                    id={`quickview-deep-view-${quickViewProduct.id}`}
-                    onClick={() => {
-                      setQuickViewProduct(null);
-                      handleNavigate('product_' + quickViewProduct.id);
-                    }}
-                    className={`px-4 sm:px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 border border-solid shrink-0 ${
-                      isLightMode
-                        ? 'bg-white hover:bg-neutral-50 text-[#0F1A3C] border-[#EADFC9] hover:border-[#F5A623] shadow-xs'
-                        : 'bg-[#0B1B32] hover:bg-[#162744] text-slate-200 border-[#162744] hover:border-[#F5A623]/60 hover:text-[#F5A623]'
-                    }`}
-                  >
-                    <span>Deep View</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#F5A623]" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={Boolean(quickViewProduct)}
+        onClose={() => setQuickViewProduct(null)}
+        onAddToCart={handleAddToCart}
+        onToggleWishlist={handleToggleWishlist}
+        isWishlisted={Boolean(quickViewProduct && wishlist.some((p) => p.id === quickViewProduct.id))}
+        onNavigateToDetail={(p) => handleNavigate('product_' + p.id)}
+        isLightMode={isLightMode}
+      />
 
       {/* 2.5 Compare Sticky Bottom Drawer Panel */}
-<<<<<<< HEAD
       {comparedProducts.length > 0 && !isCompareBarDismissed && (
         <ComparisonCorridorBar
           selectedItems={comparedProducts}
@@ -1832,45 +1570,6 @@ export default function App() {
           }}
           onCompare={() => setShowCompareModal(true)}
         />
-=======
-      {comparedProducts.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-neutral-950/95 border-t-2 border-solid border-[#D1D1D1]/40 backdrop-blur-lg p-4 z-40 shadow-2xl flex items-center justify-between gap-4 max-w-7xl mx-auto rounded-t-3xl animate-page-in">
-          <div className="flex items-center gap-4">
-            <div className="hidden md:block">
-              <p className="text-xs font-black text-white uppercase tracking-wider">Comparison Corridor</p>
-              <p className="text-[10px] text-neutral-500">{comparedProducts.length} premium creations selected</p>
-            </div>
-            <div className="flex gap-2">
-              {comparedProducts.map((p, pIdx) => (
-                <div key={`cmp-bar-${p.id}-${pIdx}`} className="relative group w-12 h-12 rounded-lg overflow-hidden border border-solid border-neutral-800">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  <button
-                    onClick={() => setComparedProducts(comparedProducts.filter((item) => item.id !== p.id))}
-                    className="absolute -top-1 -right-1 bg-neutral-900 border border-solid border-[#D1D1D1]/30 p-0.5 rounded-full text-neutral-400 hover:text-[#D1D1D1] shadow transition-colors cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setComparedProducts([])}
-              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-[#D1D1D1] rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              Purge Matrix
-            </button>
-            <button
-              onClick={() => setShowCompareModal(true)}
-              className="px-5 py-2 bg-gradient-to-r from-[#ffffff] to-[#D1D1D1] text-black font-black uppercase rounded-xl text-[10px] tracking-wider transition-all shadow-lg cursor-pointer"
-            >
-              Compare Specs ({comparedProducts.length})
-            </button>
-          </div>
-        </div>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
       )}
 
       {/* 2.5 Detailed Attribute Compare Specification Modal */}
@@ -1970,11 +1669,7 @@ export default function App() {
 
       {/* Floating Messenger Side Widget/Popup */}
       {isChatOpen && (
-<<<<<<< HEAD
         <Suspense fallback={<MessengerLoadingFallback />}>
-=======
-        <Suspense fallback={null}>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           <div id="chat-widget-container" className="fixed bottom-6 right-6 z-[90] w-[380px] max-w-[calc(100vw-32px)] h-[min(580px,calc(100vh-100px))] rounded-3xl overflow-hidden shadow-2xl border-2 border-solid border-[#D1D1D1]/40 flex flex-col bg-white animate-slide-up animate-page-in">
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
               <Messenger

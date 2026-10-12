@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 import { useState, useEffect, useMemo, FormEvent, useRef } from 'react';
-=======
-import { useState, useEffect, useMemo, FormEvent } from 'react';
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
+import { createPortal } from 'react-dom';
 import {
   Store,
   Plus,
@@ -20,7 +17,6 @@ import {
   MapPin,
   RefreshCw,
   ExternalLink,
-<<<<<<< HEAD
   ShieldCheck,
   Camera,
   Upload,
@@ -28,9 +24,6 @@ import {
   Star,
   ArrowLeft,
   ArrowRight
-=======
-  ShieldCheck
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 } from 'lucide-react';
 import GlassCloseButton from '../components/GlassCloseButton';
 import GlassIconButton from '../components/GlassIconButton';
@@ -74,6 +67,15 @@ export default function SellerDashboard({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  useEffect(() => {
+    if (!modalOpen) return;
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = orig;
+    };
+  }, [modalOpen]);
+
   // Form Fields
   const [formName, setFormName] = useState('');
   const [formBrand, setFormBrand] = useState('');
@@ -85,13 +87,10 @@ export default function SellerDashboard({
   const [formStock, setFormStock] = useState<number>(15);
   const [formStockStatus, setFormStockStatus] = useState('In Stock');
   const [formImage, setFormImage] = useState(SAMPLE_IMAGES[0].url);
-<<<<<<< HEAD
   const [formImages, setFormImages] = useState<string[]>([SAMPLE_IMAGES[0].url]);
   const [sellerUrlInput, setSellerUrlInput] = useState('');
   const sellerFileInputRef = useRef<HTMLInputElement>(null);
   const [sellerIsDragging, setSellerIsDragging] = useState(false);
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   const [formDescription, setFormDescription] = useState('');
   // Indian Marketplace Compliance Fields
   const [formHsnCode, setFormHsnCode] = useState('');
@@ -162,11 +161,8 @@ export default function SellerDashboard({
     setFormStock(15);
     setFormStockStatus('In Stock');
     setFormImage(SAMPLE_IMAGES[0].url);
-<<<<<<< HEAD
     setFormImages([SAMPLE_IMAGES[0].url]);
     setSellerUrlInput('');
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     setFormDescription('Artisan hand-crafted piece sourced from authentic verified atelier workshops.');
     setFormHsnCode('');
     setFormGstRate(18);
@@ -187,16 +183,12 @@ export default function SellerDashboard({
     setFormEligibleFor20Min(Boolean(p.eligibleFor20MinDelivery || p.category === 'delivery' || p.category === 'grocery' || p.category === 'food_delivery'));
     setFormStock(p.stock !== undefined ? p.stock : 10);
     setFormStockStatus(p.stockStatus || 'In Stock');
-<<<<<<< HEAD
     const initialImgs = p.images && p.images.length > 0
       ? p.images
       : (p.image ? [p.image] : [SAMPLE_IMAGES[0].url]);
     setFormImage(p.image || initialImgs[0]);
     setFormImages(initialImgs);
     setSellerUrlInput('');
-=======
-    setFormImage(p.image || SAMPLE_IMAGES[0].url);
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     setFormDescription(p.description || '');
     setFormHsnCode(p.hsnCode || '');
     setFormGstRate(p.gstRate !== undefined ? Number(p.gstRate) : 18);
@@ -206,7 +198,6 @@ export default function SellerDashboard({
     setModalOpen(true);
   };
 
-<<<<<<< HEAD
   // Image Upload & Management Handlers for Sellers
   const handleSellerFileUpload = (files: FileList | File[]) => {
     const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -287,8 +278,6 @@ export default function SellerDashboard({
     }
   };
 
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
@@ -299,12 +288,9 @@ export default function SellerDashboard({
     setSubmitting(true);
     try {
       const is20Min = Boolean(formEligibleFor20Min || formCategory === 'delivery' || formCategory === 'grocery' || formCategory === 'food_delivery');
-<<<<<<< HEAD
       const finalPrimary = formImage.trim() || formImages[0] || SAMPLE_IMAGES[0].url;
       const finalImagesList = formImages.length > 0 ? formImages.filter(Boolean) : [finalPrimary];
 
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
       const payload: SellerProductPayload = {
         name: formName.trim(),
         brand: formBrand.trim() || sellerProfile?.shopName || 'Official Merchant',
@@ -315,12 +301,8 @@ export default function SellerDashboard({
         eligibleFor20MinDelivery: is20Min,
         stock: Number(formStock) || 0,
         stockStatus: formStockStatus,
-<<<<<<< HEAD
         image: finalPrimary,
         images: finalImagesList,
-=======
-        image: formImage.trim() || SAMPLE_IMAGES[0].url,
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
         description: formDescription.trim(),
         hsnCode: formHsnCode.trim() || undefined,
         gstRate: Number(formGstRate) || 18,
@@ -661,10 +643,10 @@ export default function SellerDashboard({
       </div>
 
       {/* 4. ADD / EDIT PRODUCT MODAL */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+      {modalOpen && createPortal(
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto animate-fade-in" onClick={() => setModalOpen(false)}>
           <div
-            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative transition-all"
+            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-xl max-h-[min(90vh,780px)] overflow-y-auto shadow-2xl p-6 relative transition-all my-auto animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -836,7 +818,6 @@ export default function SellerDashboard({
                 </div>
               </div>
 
-<<<<<<< HEAD
               {/* Multi-Image Upload & Management */}
               <div className="space-y-3 p-3.5 bg-neutral-50 dark:bg-neutral-950/70 rounded-2xl border border-neutral-200 dark:border-neutral-800">
                 <div className="flex items-center justify-between">
@@ -921,25 +902,10 @@ export default function SellerDashboard({
                 {/* Presets */}
                 <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                   <span className="text-[10px] text-neutral-400 font-mono">Sample Presets:</span>
-=======
-              {/* Image URL & Quick Picker */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-neutral-700 dark:text-neutral-300">Product Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={formImage}
-                  onChange={(e) => setFormImage(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded-xl focus:border-amber-500 focus:outline-none text-neutral-900 dark:text-white font-mono text-[11px]"
-                />
-                <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-neutral-400">Presets:</span>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                   {SAMPLE_IMAGES.map((sample) => (
                     <button
                       key={sample.label}
                       type="button"
-<<<<<<< HEAD
                       onClick={() => {
                         if (!formImages.includes(sample.url)) {
                           setFormImages((prev) => [...prev, sample.url]);
@@ -1058,19 +1024,6 @@ export default function SellerDashboard({
                     ⚠️ At least one product photo is recommended for storefront display.
                   </p>
                 )}
-=======
-                      onClick={() => setFormImage(sample.url)}
-                      className={`px-2 py-0.5 rounded text-[10px] border transition-all ${
-                        formImage === sample.url
-                          ? 'bg-amber-100 text-amber-800 border-amber-300 font-bold'
-                          : 'bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200'
-                      }`}
-                    >
-                      {sample.label}
-                    </button>
-                  ))}
-                </div>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
               </div>
 
               {/* Description */}
@@ -1194,7 +1147,8 @@ export default function SellerDashboard({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

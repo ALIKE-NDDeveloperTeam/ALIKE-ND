@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-<<<<<<< HEAD
 import { CONTACT_PHONE } from '../config/constants';
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import { 
   Shield, 
   Lock, 
@@ -409,11 +406,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({
                   <div className="space-y-1">
                     <p className="text-neutral-500 font-semibold">Security Operations Line:</p>
                     <p className="font-mono font-bold text-[#0F1A3C] dark:text-white">
-<<<<<<< HEAD
                       {CONTACT_PHONE}
-=======
-                      +91 3824 XXXXXX [PLACEHOLDER — REPLACE WITH ACTUAL DETAILS]
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                     </p>
                     <p className="text-neutral-500 text-[11px]">Primary Headquarters:</p>
                     <p className="font-medium text-[#0F1A3C] dark:text-neutral-300">

@@ -158,10 +158,72 @@ export const CATEGORIES: CategoryItem[] = [
   },
   { 
     id: 'beauty', 
-    label: 'Beauty & Wellness', 
-    labelBn: 'সৌন্দর্য ও প্রসাধনী', 
+    label: 'Cosmetics & Beauty', 
+    labelBn: 'প্রসাধন ও রূপচর্চা', 
     icon: 'Sparkles',
-    badge: { text: 'TRENDING', color: '#EC4899' }
+    badge: { text: 'TRENDING', color: '#EC4899' },
+    subCategories: [
+      // Face Makeup
+      'Foundation', 'BB Cream', 'CC Cream', 'Concealer', 'Face Powder', 'Compact & Loose Powder', 'Blush', 'Highlighter', 'Bronzer & Contour', 'Makeup Primer', 'Setting Spray', 'Makeup Remover',
+      // Eye Makeup
+      'Kajal & Kohl', 'Eyeliner', 'Mascara', 'Eyeshadow', 'Eyeshadow Palette', 'Eyebrow Pencil & Gel', 'Eyelash Curler & Lashes',
+      // Lip Makeup
+      'Lipstick', 'Liquid Lipstick', 'Lip Gloss', 'Lip Liner', 'Lip Tint', 'Lip Balm & Oil',
+      // Nail Care
+      'Nail Polish', 'Gel Nail Polish', 'Nail Polish Remover', 'Nail Art & Tools',
+      // Skincare
+      'Face Wash & Cleanser', 'Face Scrub', 'Toner & Mists', 'Face Serum & Treatments', 'Moisturizer & Face Cream', 'Face Mask & Sheet Mask', 'Sunscreen (SPF)', 'Acne & Dark Spot Care', 'Anti-Aging & Wrinkle Care', 'Under-Eye Cream & Patches',
+      // Body Care & Bath
+      'Body Wash & Shower Gel', 'Body Lotion & Body Butter', 'Body Scrub', 'Hand Wash & Hand Cream', 'Foot Cream & Care',
+      // Hair Care
+      'Shampoo', 'Conditioner', 'Hair Oil', 'Hair Serum & Heat Protectant', 'Hair Mask & Spa', 'Hair Wax & Styling Gel', 'Hair Color & Highlights',
+      // Beauty Accessories & Tools
+      'Makeup Brushes', 'Beauty Blenders & Sponges', 'Makeup Mirrors & Organizers', 'Facial Rollers & Gua Sha',
+      // Top Cosmetics Brands
+      'Maybelline New York', "L'Oréal Paris", 'Lakmé', 'M.A.C', 'Revlon', 'SUGAR Cosmetics', 'Huda Beauty', 'The Body Shop', 'The Ordinary', 'Minimalist', 'Neutrogena'
+    ]
+  },
+  { 
+    id: 'perfumes', 
+    label: 'Perfumes & Fragrances', 
+    labelBn: 'সুগন্ধি ও পারফিউম', 
+    icon: 'Flame',
+    badge: { text: 'LUXURY', color: '#8B5CF6' },
+    subCategories: [
+      // Men's Perfume
+      "Men's Eau de Parfum (EDP)", "Men's Eau de Toilette (EDT)", "Men's Cologne & Spray", "Men's Deodorant & Body Spray",
+      // Women's Perfume
+      "Women's Eau de Parfum (EDP)", "Women's Eau de Toilette (EDT)", "Women's Perfume Spray & Mist", "Women's Body Mist & Spray",
+      // Unisex Fragrance
+      "Unisex Perfume", "Unisex EDP & EDT", "Unisex Attar & Oil",
+      // Attar & Traditional Fragrance
+      'Pure Attar & Ittar', 'Oud & Dehn Al Oud', 'Musk & Kasturi', 'Rose & Jasmine Attar', 'Sandalwood (Chandan) Attar', 'Bakhoor & Incense', 'Fragrance Oils',
+      // Gift Sets & Combos
+      'Men’s Perfume Gift Sets', 'Women’s Luxury Gift Sets', 'Couple Perfume Gift Sets', 'Travel Miniature Perfumes',
+      // Accessories
+      'Pocket Perfumes & Travel Atomizers', 'Empty Decant Bottles', 'Fragrance Storage Cases',
+      // Top Fragrance Brands
+      'Dior', 'Chanel', 'Gucci', 'Versace', 'Armani', 'Hugo Boss', 'Calvin Klein', 'Burberry', 'Paco Rabanne', 'Yves Saint Laurent', 'Tom Ford', 'Ajmal', 'Rasasi', 'Al Haramain', 'Fogg', 'Wild Stone', 'Denver', 'Bella Vita Organic'
+    ]
+  },
+  { 
+    id: 'personal_care', 
+    label: 'Personal Care & Grooming', 
+    labelBn: 'ব্যক্তিগত যত্ন ও গ্রুমিং', 
+    icon: 'Sparkles',
+    badge: { text: 'DAILY', color: '#0EA5E9' },
+    subCategories: [
+      'Bathing Soaps & Body Wash',
+      'Toothpaste & Oral Care',
+      'Toothbrushes & Tongue Cleaners',
+      'Shaving Creams & Razors',
+      'Aftershave & Beard Care',
+      'Men’s Trimmers & Grooming Kits',
+      'Deodorants & Roll-ons',
+      'Sanitary Pads & Intimate Hygiene',
+      'Cotton Buds & Wipes',
+      'Hand Sanitizers & Antiseptics'
+    ]
   },
   { 
     id: 'furniture', 
@@ -240,10 +302,7 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "jewellery",
-<<<<<<< HEAD
     audience: "unisex",
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "TRENDING",
     description: "An elegant Italian-crafted Venetian chain dipped in authentic 18-karat gold. Designed with precision linkage for a comfortable feel and rich glow.",
     specifications: {
@@ -298,10 +357,7 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "fashion",
-<<<<<<< HEAD
     audience: "women",
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "HOT",
     description: "Flowing beautifully, this mulberry silk evening gown is tailored precisely for VIP cocktail galas, featuring structured pleats and gold thread embroidery.",
     specifications: {
@@ -464,10 +520,7 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "beauty",
-<<<<<<< HEAD
     audience: "unisex",
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "SALE",
     description: "Enriched with real micro gold leaf flakes and organic hyaluronic essence for stellar deep moisturization and youthful golden radiance.",
     specifications: {
@@ -621,10 +674,7 @@ export const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&q=75&w=500&fm=webp"
     ],
     category: "beauty",
-<<<<<<< HEAD
     audience: "unisex",
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     badge: "SALE",
     description: "Hand-poured premium soy candle scented with heavy organic amber oil and pure gold leaf details. Up to 60 hours clean, non-toxic burn time.",
     specifications: {
@@ -767,7 +817,6 @@ export const PRODUCTS: Product[] = [
     },
     colors: ["Natural Golden Blend"],
     sizes: ["1kg Duo Pack", "500g Pack"]
-<<<<<<< HEAD
   },
   {
     id: 23,
@@ -866,8 +915,6 @@ export const PRODUCTS: Product[] = [
     },
     colors: ["Warm Oat", "Cloud White"],
     sizes: ["0-3M", "3-6M", "6-12M", "12-18M"]
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   }
 ];
 

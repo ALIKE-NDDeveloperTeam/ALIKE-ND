@@ -58,13 +58,76 @@
   background:#FAF7FA !important;
 }
 
-.ap-btn{font-family:'Inter',sans-serif;font-weight:600;font-size:13px;padding:9px 18px;border-radius:24px;border:1px solid transparent;cursor:pointer;}
-.ap-btn-primary{background:var(--magenta);color:#fff;}
-.ap-btn-primary:hover{background:var(--magenta-deep);}
-.ap-btn-ghost{background:transparent;border-color:var(--line);color:var(--ink);}
-.ap-btn-ghost:hover{background:var(--paper-2);}
-.ap-btn-danger{background:transparent;color:#C13A5E;border-color:transparent;}
-.ap-btn-sm{padding:5px 13px;font-size:12px;}
+.ap-btn {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  line-height: 1.4;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  white-space: nowrap;
+}
+.ap-btn:active {
+  transform: scale(0.97);
+}
+.ap-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+.ap-btn-primary {
+  background: linear-gradient(135deg, #E8177D 0%, #C41266 100%);
+  color: #ffffff;
+  border-color: rgba(232, 23, 125, 0.4);
+  box-shadow: 0 2px 8px rgba(232, 23, 125, 0.25);
+}
+.ap-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F02388 0%, #B90F63 100%);
+  box-shadow: 0 4px 14px rgba(232, 23, 125, 0.35);
+  transform: translateY(-1px);
+}
+.ap-btn-primary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.ap-btn-ghost {
+  background: #ffffff;
+  border-color: #E2D9E2;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.ap-btn-ghost:hover:not(:disabled) {
+  background: #FAF7FA;
+  border-color: #D4C7D4;
+  color: #17141B;
+  transform: translateY(-1px);
+}
+.ap-btn-ghost:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.ap-btn-danger {
+  background: #FFF1F4;
+  color: #E11D48;
+  border-color: #FEE2E2;
+}
+.ap-btn-danger:hover:not(:disabled) {
+  background: #FFE4E8;
+  color: #BE123C;
+  border-color: #FECDD3;
+}
+.ap-btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  gap: 5px;
+}
 
 .ap-seal{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;padding:4px 11px;border-radius:20px;text-transform:uppercase;}
 .ap-seal-pending{background:#FBF0DD;color:#93630F;} .ap-seal-shipped{background:#EFE7F7;color:#5B3B8C;}
@@ -72,16 +135,36 @@
 .ap-seal-approved{background:#E4F6EC;color:#1F7A45;} .ap-seal-review{background:#FBF0DD;color:#93630F;}
 .ap-seal-suspended{background:#F1E9EF;color:#6B5C68;}
 
-.ap-input,.ap-select{font-family:'Inter',sans-serif;font-size:13.5px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);width:100%;}
+.ap-input, .ap-select {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13.5px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ap-input:focus, .ap-select:focus {
+  outline: none;
+  border-color: var(--magenta);
+  box-shadow: 0 0 0 3px rgba(232, 23, 125, 0.15);
+}
+.ap-input.ap-input-search,
+.ap-input-search {
+  padding-left: 42px !important;
+}
 .ap-field{margin-bottom:14px;}
 .ap-field label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;display:block;}
 .ap-search-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
 .ap-toolbar-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:4px;}
 
-.ap-modal-backdrop{position:fixed;inset:0;background:rgba(23,20,27,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;}
-.ap-modal{background:#fff;border-radius:16px;width:100%;max-width:440px;padding:26px;}
+.ap-modal-backdrop{position:fixed;inset:0;background:rgba(23,20,27,.75);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
+.ap-modal{background:#fff;border-radius:16px;width:100%;max-width:440px;padding:26px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,0.35);}
+.ap-modal-wide{max-width:880px !important;width:94vw !important;}
 .ap-modal h3{font-family:'Playfair Display',serif;font-size:20px;margin:0 0 16px;}
-.ap-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+.ap-modal-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:20px;}
 
 .ap-avatar{width:32px;height:32px;border-radius:50%;background:var(--plum);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:700;font-size:13px;}
 .ap-prod-thumb{width:38px;height:38px;border-radius:9px;background:var(--paper-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;}
@@ -92,3 +175,26 @@
 .ap-login-sub{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:5px 0 26px;}
 .ap-login-err{background:#FBE7EE;color:#B02257;font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:14px;}
 .ap-loading{padding:60px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:13px;}
+
+.ap-sidebar-backdrop{position:fixed;inset:0;background:rgba(15,10,25,0.65);backdrop-filter:blur(4px);z-index:65;opacity:0;pointer-events:none;transition:opacity 0.3s ease;}
+.ap-sidebar-backdrop.active{opacity:1;pointer-events:auto;}
+
+@media (max-width: 1024px) {
+  .ap-sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    bottom:0;
+    height:100vh;
+    box-shadow:4px 0 35px rgba(0,0,0,0.5);
+    transform:translateX(-100%);
+    z-index:70 !important;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .ap-sidebar.mobile-open,
+  .ap-sidebar.open{
+    transform:translateX(0) !important;
+  }
+}

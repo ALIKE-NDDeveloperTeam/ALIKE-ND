@@ -91,6 +91,45 @@ export default function Profile({
   // Password change states
   const [curPass, setCurPass] = useState('');
   const [newPass, setNewPass] = useState('');
+  const [isUpdatingPass, setIsUpdatingPass] = useState(false);
+
+  const handleUpdatePassword = async () => {
+    if (!curPass || !newPass) {
+      showToast('Please insert current and new password.', 'warning');
+      return;
+    }
+    if (newPass.length < 6) {
+      showToast('New password must be at least 6 characters.', 'warning');
+      return;
+    }
+    setIsUpdatingPass(true);
+    try {
+      const token = localStorage.getItem('alikend_user_token');
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          email: user?.email,
+          currentPassword: curPass,
+          newPassword: newPass,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update password');
+      }
+      showToast(data.message || 'Your security credentials have reset successfully.', 'success');
+      setCurPass('');
+      setNewPass('');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update security password.', 'error');
+    } finally {
+      setIsUpdatingPass(false);
+    }
+  };
 
   // Address catalog states (scoped per user, starts completely empty for new accounts)
   const [addrs, setAddrs] = useState<Address[]>(() => {
@@ -740,22 +779,16 @@ export default function Profile({
                 <div className="flex justify-end">
                   <button
                     id="prof-reset-pass-btn"
-                    onClick={() => {
-                      if (!curPass || !newPass) {
-                        showToast('Please insert credentials fully.', 'warning');
-                        return;
-                      }
-                      showToast('Your security credentials have reset successfully.', 'success');
-                      setCurPass('');
-                      setNewPass('');
-                    }}
+                    type="button"
+                    onClick={handleUpdatePassword}
+                    disabled={isUpdatingPass}
                     className={`px-5 py-2.5 border rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-2 ${
                       isLightMode 
                         ? 'bg-white hover:bg-neutral-100 border-neutral-300 text-neutral-800 shadow-2xs' 
                         : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-700 text-white'
                     }`}
                   >
-                    <span>Update Security Password</span>
+                    <span>{isUpdatingPass ? 'Updating Password...' : 'Update Security Password'}</span>
                   </button>
                 </div>
               </div>

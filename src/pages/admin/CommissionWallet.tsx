@@ -18,20 +18,15 @@ import {
   Sparkles,
   History,
   CheckCircle2,
-<<<<<<< HEAD
   FileText,
-  Download
-=======
-  FileText
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
+  Download,
+  X,
+  ArrowDownCircle
 } from "lucide-react";
 import GlassCloseButton from "../../components/GlassCloseButton";
 import { CommissionData } from "../adminTypes";
 import { adminApi } from "../adminApi";
-<<<<<<< HEAD
 import { exportDataToExcel, formatCommissionForExcel } from "../../utils/exportToExcel";
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 interface CommissionWalletProps {
   data: CommissionData | null;
@@ -157,36 +152,37 @@ export const CommissionWallet: React.FC<CommissionWalletProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Control Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-neutral-900 via-indigo-950 to-neutral-900 p-6 rounded-2xl border border-indigo-500/20 text-white shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-              <Wallet className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold font-serif tracking-tight text-white flex items-center gap-2">
-                Platform Earnings & Commission Wallet
-                <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  REAL DATABASE
-                </span>
-              </h2>
-              <p className="text-xs text-neutral-300 font-mono">
-                Source: <code className="text-purple-300">alikendshop.orders</code> &amp; <code className="text-purple-300">alikendshop.platform_settings</code>
-              </p>
+      {/* Top Banner Card */}
+      <div className="bg-white dark:bg-[#141B2D] border border-slate-200/80 dark:border-neutral-800 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <Wallet className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400">Source:</span>
+              <code className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded">
+                alikendshop.orders
+              </code>
+              <span className="text-xs text-slate-400">&amp;</span>
+              <code className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded">
+                alikendshop.platform_settings
+              </code>
             </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800 tracking-wider">
+            REAL DATABASE
+          </span>
           <button
             onClick={() => onRefresh()}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 border border-slate-200 dark:border-neutral-700 transition-all cursor-pointer disabled:opacity-50"
             title="Refresh Ledger"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-400" : ""}`} />
-            <span>Refresh Ledger</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-500" : ""}`} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -317,86 +313,77 @@ export const CommissionWallet: React.FC<CommissionWalletProps> = ({
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Commission Earned */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-900 to-teal-950 text-white border border-emerald-500/30 shadow-lg relative overflow-hidden">
-          <div className="absolute right-3 -bottom-2 text-emerald-500/10 pointer-events-none">
-            <DollarSign className="w-24 h-24" />
-          </div>
-          <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-300 font-bold mb-1">
-            Total Commission Earned
-          </div>
-          <div className="text-2xl lg:text-3xl font-bold font-serif tracking-tight text-white">
-            ₹{totalCommission.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[11px] text-emerald-300/80 mt-2 flex items-center gap-1 font-medium">
-            <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
-            Accrued across {orders.length} real orders
-          </div>
-        </div>
-
-        {/* Platform Running Balance (Wallet) */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white border border-indigo-500/30 shadow-lg relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute right-3 -bottom-2 text-indigo-500/10 pointer-events-none">
-            <Wallet className="w-24 h-24" />
-          </div>
+      {/* Stats Cards Grid (Fixed Number Overflow & Line-height) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Card 1: Total Commission Earned */}
+        <div className="bg-emerald-900 text-white rounded-2xl p-5 shadow-md flex flex-col justify-between h-36">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300 font-sans">
+            TOTAL COMMISSION EARNED
+          </span>
           <div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-300 font-bold">
-                Platform Wallet Balance
-              </span>
-              <button
-                type="button"
-                onClick={handleOpenWithdrawModal}
-                disabled={runningBalance <= 0}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold font-mono tracking-wider bg-emerald-500 hover:bg-emerald-400 text-neutral-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 cursor-pointer"
-                title="Withdraw funds from platform wallet balance"
-              >
-                <ArrowDownToLine className="w-3.5 h-3.5" />
-                Withdraw
-              </button>
-            </div>
-            <div className="text-2xl lg:text-3xl font-bold font-serif tracking-tight text-white">
-              ₹{runningBalance.toLocaleString("en-IN")}
-            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-white leading-none font-sans">
+              ₹{totalCommission.toLocaleString("en-IN")}
+            </h2>
+            <p className="text-[11px] text-emerald-200 mt-2 flex items-center font-medium font-sans">
+              <TrendingUp className="w-3.5 h-3.5 mr-1 text-emerald-400 shrink-0" />
+              Accrued across {orders.length} real orders
+            </p>
           </div>
-          <div className="text-[11px] text-indigo-300/80 mt-3 flex items-center justify-between gap-2 font-medium flex-wrap">
-            <span className="flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-              Available to withdraw
+        </div>
+
+        {/* Card 2: Platform Wallet Balance */}
+        <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-md flex flex-col justify-between h-36 relative overflow-hidden">
+          <div className="flex justify-between items-start z-10">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 font-sans">
+              PLATFORM WALLET BALANCE
             </span>
-            {totalWithdrawn > 0 && (
-              <span className="text-[10px] font-mono text-indigo-200 bg-indigo-500/25 px-2 py-0.5 rounded border border-indigo-400/30">
-                ₹{totalWithdrawn.toLocaleString("en-IN")} withdrawn
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={handleOpenWithdrawModal}
+              disabled={runningBalance <= 0}
+              className="flex items-center space-x-1 px-3 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-slate-950 font-extrabold text-[11px] rounded-lg shadow-xs transition-all cursor-pointer font-sans"
+            >
+              <Download className="w-3 h-3" />
+              <span>Withdraw</span>
+            </button>
+          </div>
+          <div className="z-10">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white leading-none font-sans">
+              ₹{runningBalance.toLocaleString("en-IN")}
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-2 font-medium font-sans">
+              ✓ Available to withdraw
+            </p>
           </div>
         </div>
 
-        {/* Gross Order Volume */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#141B2D] border border-neutral-200 dark:border-neutral-800 shadow-sm">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold mb-1">
-            Customer Gross Paid Total
-          </div>
-          <div className="text-2xl font-bold font-serif text-neutral-900 dark:text-white">
-            ₹{totalRevenue.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-2">
-            Exact customer billing volume
+        {/* Card 3: Customer Gross Paid Total */}
+        <div className="bg-white dark:bg-[#141B2D] border border-slate-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-36">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-sans">
+            CUSTOMER GROSS PAID TOTAL
+          </span>
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-none font-sans">
+              ₹{totalRevenue.toLocaleString("en-IN")}
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-2 font-medium font-sans">
+              Exact customer billing volume
+            </p>
           </div>
         </div>
 
-        {/* Average Commission Per Order */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#141B2D] border border-neutral-200 dark:border-neutral-800 shadow-sm">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold mb-1">
-            Avg. Platform Margin / Order
-          </div>
-          <div className="text-2xl font-bold font-serif text-amber-600 dark:text-amber-400">
-            ₹{avgCommission.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-2">
-            Average fee per checkout
+        {/* Card 4: Avg Platform Margin / Order */}
+        <div className="bg-white dark:bg-[#141B2D] border border-slate-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-36">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-sans">
+            AVG. PLATFORM MARGIN / ORDER
+          </span>
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-amber-600 dark:text-amber-400 leading-none font-sans">
+              ₹{avgCommission.toLocaleString("en-IN")}
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-2 font-medium font-sans">
+              Average fee per checkout
+            </p>
           </div>
         </div>
       </div>
@@ -441,7 +428,6 @@ export const CommissionWallet: React.FC<CommissionWalletProps> = ({
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
             </select>
-<<<<<<< HEAD
 
             {/* Export to Excel */}
             <button
@@ -461,8 +447,6 @@ export const CommissionWallet: React.FC<CommissionWalletProps> = ({
               <Download className="w-3.5 h-3.5" />
               <span>Export Excel</span>
             </button>
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           </div>
         </div>
 

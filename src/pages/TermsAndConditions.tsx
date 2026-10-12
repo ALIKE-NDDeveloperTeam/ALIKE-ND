@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-<<<<<<< HEAD
 import { CONTACT_PHONE } from '../config/constants';
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import { 
   FileText, 
   ShieldCheck, 
@@ -384,11 +381,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
                     </p>
                     <p className="text-neutral-500 text-[11px]">Official Telephone:</p>
                     <p className="font-mono font-bold text-[#0F1A3C] dark:text-white">
-<<<<<<< HEAD
                       {CONTACT_PHONE}
-=======
-                      +91 3824 XXXXXX [PLACEHOLDER — REPLACE WITH ACTUAL DETAILS]
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                     </p>
                   </div>
                 </div>

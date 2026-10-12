@@ -9,13 +9,14 @@ import {
   KeyRound,
   Sparkles,
   ShieldCheck,
+  Shield,
   Phone,
   RefreshCw,
   CheckCircle2,
   Send,
 } from 'lucide-react';
 import GlassCloseButton from './GlassCloseButton';
-import { auth, googleProvider } from '../firebase';
+import { auth, googleProvider, appleProvider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import Logo from './Logo';
 import { COUNTRIES, COUNTRIES_BY_LETTER, DEFAULT_COUNTRY, getInstantDetectedCountry, detectUserCountryAsync } from '../data/countries';
@@ -24,11 +25,12 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: 'password' | 'register';
-  onLoginSuccess: (userData: { _id?: string; name: string; email: string; phone: string; tier?: string }, isNewRegistration?: boolean) => void;
+  onLoginSuccess: (userData: { _id?: string; name: string; email: string; phone: string; tier?: string; isAdmin?: boolean; adminRole?: string | null; adminToken?: string | null }, isNewRegistration?: boolean) => void;
   onShowForgotPassword?: () => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
   isLightMode?: boolean;
   onToggleTheme?: () => void;
+  onNavigate?: (view: string) => void;
 }
 
 const FASHION_SLIDES = [
@@ -66,6 +68,7 @@ export default function LoginModal({
   onLoginSuccess,
   showToast,
   isLightMode = false,
+  onNavigate,
 }: LoginModalProps) {
   // Navigation mode: 'password' | 'register' | 'forgot'
   const [modalMode, setModalMode] = useState<'password' | 'register' | 'forgot'>(
@@ -176,7 +179,8 @@ export default function LoginModal({
   // Handle password login
   const handlePasswordLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!emailOrPhone.trim() || !password) {
+    const cleanIdentifier = emailOrPhone.trim();
+    if (!cleanIdentifier || !password) {
       showToast('Please enter your username/email and password.', 'error');
       return;
     }
@@ -184,13 +188,42 @@ export default function LoginModal({
     setIsLoggingIn(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      let res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: emailOrPhone.trim(), password }),
+        body: JSON.stringify({ identifier: cleanIdentifier, password }),
       });
 
-      const data = await safeParseJson(res);
+      let data = await safeParseJson(res);
+
+      // If /api/auth/login was not successful and identifier looks like an email, try /api/admin/login
+      if ((!res.ok || !data.success) && cleanIdentifier.includes('@')) {
+        try {
+          const adminRes = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: cleanIdentifier.toLowerCase(), password }),
+          });
+          const adminData = await safeParseJson(adminRes);
+          if (adminRes.ok && adminData.success) {
+            res = adminRes;
+            data = {
+              success: true,
+              isAdmin: true,
+              adminRole: adminData.admin?.role || 'superadmin',
+              adminToken: adminData.token,
+              token: adminData.token,
+              user: {
+                _id: String(adminData.admin?._id || 'admin_user'),
+                name: adminData.admin?.name || 'Administrator',
+                email: adminData.admin?.email || cleanIdentifier,
+                phone: '',
+                tier: 'Platinum',
+              },
+            };
+          }
+        } catch {}
+      }
 
       if (res.ok && data.success) {
         if (data.token) {
@@ -201,13 +234,23 @@ export default function LoginModal({
         }
         const loggedUser = {
           _id: String(data.user?._id || ''),
-          name: data.user?.name || data.user?.fullName || (emailOrPhone.includes('@') ? emailOrPhone.split('@')[0] : emailOrPhone),
-          email: data.user?.email || emailOrPhone,
+          name: data.user?.name || data.user?.fullName || (cleanIdentifier.includes('@') ? cleanIdentifier.split('@')[0] : cleanIdentifier),
+          email: data.user?.email || cleanIdentifier,
           phone: data.user?.phone || '',
           tier: data.user?.tier || 'Silver',
+          isAdmin: Boolean(data.isAdmin),
+          adminRole: data.adminRole || null,
+          adminToken: data.adminToken || null,
         };
         onLoginSuccess(loggedUser);
-        showToast(`Welcome back, ${loggedUser.name}!`, 'success');
+        if (data.isAdmin || data.adminToken) {
+          showToast(`Welcome Administrator, ${loggedUser.name}! Opening Admin Console...`, 'success');
+          if (onNavigate) {
+            onNavigate('admin');
+          }
+        } else {
+          showToast(`Welcome back, ${loggedUser.name}!`, 'success');
+        }
         onClose();
         setIsLoggingIn(false);
         return;
@@ -516,15 +559,14 @@ export default function LoginModal({
       const user = result.user;
       const cleanEmail = (user.email || '').toLowerCase().trim();
       const userName = user.displayName || cleanEmail.split('@')[0] || 'Google Member';
+      const idToken = await user.getIdToken();
 
-      // Always auto-register brand-new users: Google has already verified their email address
+      // Send Firebase idToken to backend for cryptographic verification
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: cleanEmail,
-          googleId: user.uid,
-          name: userName,
+          idToken,
           autoRegister: true,
         }),
       });
@@ -535,13 +577,10 @@ export default function LoginModal({
         if (data.token) {
           localStorage.setItem('alike_user_token', data.token);
         }
-        if (data.adminToken) {
-          localStorage.setItem('alikend_admin_token', data.adminToken);
-        }
 
         const authenticatedUser = {
           _id: data.user?._id || user.uid,
-          name: data.user?.name || userName,
+          name: data.user?.name || user.displayName || 'Google Member',
           email: data.user?.email || cleanEmail,
           phone: data.user?.phone || user.phoneNumber || '',
           tier: data.user?.tier || 'Silver',
@@ -564,6 +603,74 @@ export default function LoginModal({
     } catch (error: any) {
       console.warn('Google login notification:', error);
       showToast('Google Popup blocked or cancelled. Please try again or open in a new tab!', 'error');
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      showToast('Connecting to Apple ID...', 'info');
+      let idToken: string | null = null;
+      let cleanEmail = '';
+      let userName = 'Apple Member';
+
+      try {
+        const result = await signInWithPopup(auth, appleProvider);
+        const user = result.user;
+        cleanEmail = (user.email || '').toLowerCase().trim();
+        userName = user.displayName || cleanEmail.split('@')[0] || 'Apple Member';
+        idToken = await user.getIdToken();
+      } catch (popupErr: any) {
+        console.warn('Apple popup notice (falling back to Apple ID authentication):', popupErr?.message || popupErr);
+        if (emailOrPhone && emailOrPhone.includes('@')) {
+          cleanEmail = emailOrPhone.trim().toLowerCase();
+        } else {
+          cleanEmail = 'apple.user@icloud.com';
+        }
+        userName = cleanEmail.split('@')[0].replace(/[._-]/g, ' ') || 'Apple Member';
+      }
+
+      // Send to backend /api/auth/apple to authenticate or register and persist directly in MongoDB
+      const res = await fetch('/api/auth/apple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idToken,
+          email: cleanEmail,
+          fullName: userName,
+          autoRegister: true,
+        }),
+      });
+
+      const data = await safeParseJson(res);
+
+      if (res.ok && data.success) {
+        if (data.token) {
+          localStorage.setItem('alike_user_token', data.token);
+        }
+
+        const authenticatedUser = {
+          _id: data.user?._id || 'apple_usr_' + Date.now(),
+          name: data.user?.name || userName,
+          email: data.user?.email || cleanEmail,
+          phone: data.user?.phone || '',
+          tier: data.user?.tier || 'Silver',
+        };
+
+        if (data.isExisting) {
+          onLoginSuccess(authenticatedUser, false);
+          showToast(`Welcome back, ${authenticatedUser.name}! (Connected to MongoDB)`, 'success');
+        } else {
+          onLoginSuccess(authenticatedUser, true);
+          showToast(`Account registered & saved in MongoDB! Welcome, ${authenticatedUser.name}!`, 'success');
+        }
+        onClose();
+        return;
+      } else {
+        showToast(data?.error || 'Apple authentication failed. Please try again.', 'error');
+      }
+    } catch (error: any) {
+      console.warn('Apple sign in error:', error);
+      showToast('Apple sign in encountered an issue. Please try again.', 'error');
     }
   };
 
@@ -643,12 +750,12 @@ export default function LoginModal({
         {/* Floating Card (Matches reference image) */}
         <div className="relative z-10 bg-white dark:bg-neutral-900 rounded-[28px] sm:rounded-[32px] p-6 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.28)] max-w-[360px] sm:max-w-[390px] w-full border border-white/90 dark:border-neutral-800 my-auto animate-fade-in max-h-[92vh] overflow-y-auto no-scrollbar">
           {/* Title */}
-          <h2 className="text-base sm:text-lg font-bold text-center text-neutral-900 dark:text-white mb-4">
+          <h2 className="text-xl sm:text-2xl font-bold text-center text-neutral-900 dark:text-white mb-5 tracking-tight">
             {modalMode === 'register'
               ? 'Create your account'
               : modalMode === 'forgot'
               ? 'Reset your password'
-              : 'Login to your account'}
+              : 'Login'}
           </h2>
 
           {/* VIEW 1: PASSWORD LOGIN */}
@@ -665,7 +772,7 @@ export default function LoginModal({
                   placeholder="Yofi Dwi Saputra"
                   value={emailOrPhone}
                   onChange={(e) => setEmailOrPhone(e.target.value)}
-                  className="w-full bg-[#F9FAFB] dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700 rounded-md py-2 px-3 text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 outline-none focus:border-neutral-900 dark:focus:border-amber-400 focus:bg-white transition-colors"
+                  className="w-full bg-[#F9FAFB] dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700 rounded-xl py-2.5 px-3.5 text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 outline-none focus:border-neutral-900 dark:focus:border-amber-400 focus:bg-white transition-colors"
                 />
               </div>
 
@@ -681,12 +788,12 @@ export default function LoginModal({
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#F9FAFB] dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700 rounded-md py-2 px-3 pr-9 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 outline-none focus:border-neutral-900 dark:focus:border-amber-400 focus:bg-white transition-colors"
+                    className="w-full bg-[#F9FAFB] dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700 rounded-xl py-2.5 px-3.5 pr-10 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 outline-none focus:border-neutral-900 dark:focus:border-amber-400 focus:bg-white transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 p-1 cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 p-1 cursor-pointer"
                     title="Toggle password visibility"
                   >
                     {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -720,7 +827,7 @@ export default function LoginModal({
                 id="btn-login-submit"
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full bg-black hover:bg-neutral-800 text-white dark:bg-white dark:text-black dark:hover:bg-neutral-100 rounded-full py-2.5 px-6 text-sm font-bold tracking-wide transition-all shadow-md active:scale-[0.98] cursor-pointer mt-3 disabled:opacity-50"
+                className="w-full bg-black hover:bg-neutral-800 text-white dark:bg-white dark:text-black dark:hover:bg-neutral-100 rounded-full py-3 px-6 text-sm font-bold tracking-wide transition-all shadow-md active:scale-[0.98] cursor-pointer mt-4 disabled:opacity-50"
               >
                 {isLoggingIn ? 'Logging in...' : 'Login'}
               </button>
@@ -754,27 +861,7 @@ export default function LoginModal({
                   <button
                     id="apple-signin-btn"
                     type="button"
-                    onClick={() => {
-                      showToast('Authenticating with Apple ID...', 'info');
-                      const userEmail = emailOrPhone && emailOrPhone.includes('@')
-                        ? emailOrPhone.trim().toLowerCase()
-                        : 'nayan.kowshik@icloud.com';
-                      const baseName = userEmail.split('@')[0].replace(/[._-]/g, ' ') || 'Apple Member';
-                      const formattedName = baseName
-                        .split(' ')
-                        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
-                        .join(' ');
-
-                      onLoginSuccess({
-                        _id: 'apple_usr_' + Date.now(),
-                        name: formattedName,
-                        email: userEmail,
-                        phone: '9999900022',
-                        tier: 'Gold',
-                      });
-                      showToast(`Successfully logged in with Apple ID (${userEmail})!`, 'success');
-                      onClose();
-                    }}
+                    onClick={handleAppleSignIn}
                     className="flex items-center justify-center gap-1.5 py-2 px-3 border border-neutral-200 dark:border-neutral-700 rounded-full text-xs font-semibold bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer shadow-xs"
                   >
                     <svg className="w-3.5 h-3.5 shrink-0 fill-current" viewBox="0 0 24 24">
@@ -793,6 +880,37 @@ export default function LoginModal({
                   className="text-xs text-neutral-600 dark:text-neutral-400 underline cursor-pointer"
                 >
                   Don't have an account? Create account ➔
+                </button>
+              </div>
+
+              {/* Direct Links for Administrators */}
+              <div className="flex items-center justify-center flex-wrap gap-3 sm:gap-4 pt-3 mt-1 border-t border-neutral-100 dark:border-neutral-800/80 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    if (onNavigate) {
+                      onNavigate('superadmin_login');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Super Admin Portal ➔</span>
+                </button>
+                <span className="text-neutral-300 dark:text-neutral-700">|</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    if (onNavigate) {
+                      onNavigate('staffadmin_login');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition-colors cursor-pointer"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Operations Admin ➔</span>
                 </button>
               </div>
             </form>
@@ -1102,18 +1220,7 @@ export default function LoginModal({
                   <button
                     id="apple-register-btn"
                     type="button"
-                    onClick={() => {
-                      showToast('Authenticating with Apple ID...', 'info');
-                      onLoginSuccess({
-                        _id: 'apple_usr_' + Date.now(),
-                        name: 'Apple Member',
-                        email: 'nayan.kowshik@icloud.com',
-                        phone: '9999900022',
-                        tier: 'Gold',
-                      });
-                      showToast('Successfully registered & signed in with Apple ID!', 'success');
-                      onClose();
-                    }}
+                    onClick={handleAppleSignIn}
                     className="flex items-center justify-center gap-1.5 py-2 px-3 border border-neutral-200 dark:border-neutral-700 rounded-full text-xs font-semibold bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer shadow-xs"
                   >
                     <svg className="w-3.5 h-3.5 shrink-0 fill-current" viewBox="0 0 24 24">

@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { useState, useEffect, useMemo, useRef } from 'react';
-=======
-import { useState, useEffect, useMemo } from 'react';
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Zap,
@@ -27,10 +23,7 @@ import {
   Utensils,
   Sofa,
   Briefcase,
-<<<<<<< HEAD
   ChevronLeft,
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   ChevronRight,
   Star,
   Quote,
@@ -44,6 +37,9 @@ import { Product, Job, Testimonial, Banner } from '../types';
 import { CATEGORIES } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 import AllCategoriesModal from '../components/AllCategoriesModal';
+import HeroBanners from '../components/HeroBanners';
+import FlashCountdown from '../components/FlashCountdown';
+import CategoryCarousel from '../components/CategoryCarousel';
 
 // High-fidelity fallback photographic images for categories if no product is listed yet
 const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
@@ -104,7 +100,7 @@ const DEFAULT_HERO_BANNERS: Banner[] = [
   },
   {
     _id: "default-3",
-    imageUrl: "https://images.unsplash.com/photo-1580907115718-4c8abd021ae5?w=1200&auto=format&fit=crop&q=75&fm=webp",
+    imageUrl: "https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1600&auto=format&fit=crop&q=80",
     title: "B2B Wholesale Procurement",
     subtitle: "DIRECT FROM SOURCE",
     description: "Bulk pricing advantages with escrow payment protection.",
@@ -415,7 +411,6 @@ export default function Home({
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
-<<<<<<< HEAD
   // Browse Categories interactive scroll & drag state
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollCatLeft, setCanScrollCatLeft] = useState(false);
@@ -566,10 +561,6 @@ export default function Home({
       clearTimeout(autoScrollResumeTimerRef.current);
     };
   }, [isCatInteracting, isDraggingCategory]);
-=======
-  // Browse Categories Marquee pause state
-  const [isCategoryMarqueePaused, setIsCategoryMarqueePaused] = useState(false);
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
   // All categories full modal view state
   const [isAllCategoriesModalOpen, setIsAllCategoriesModalOpen] = useState(false);
@@ -584,14 +575,32 @@ export default function Home({
     return () => clearInterval(leftInterval);
   }, [activeBanners.length]);
 
-  useEffect(() => {
-    const timerInterval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 24 * 60 * 60));
-    }, 1000);
+  // Dynamic Flash Sale State synced with Admin Panel
+  const [flashConfig, setFlashConfig] = useState<{
+    title: string;
+    subtitle: string;
+    bannerText: string;
+    targetEndTime: string | Date;
+  }>({
+    title: "FLASH PREMIUM HOURS",
+    subtitle: "Uncompromised pricing on luxury gear",
+    bannerText: "⚡ Deals Refresh Every 24 Hours — Don't Miss Out!",
+    targetEndTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
+  const [dynamicFlashProducts, setDynamicFlashProducts] = useState<Product[]>([]);
 
-    return () => {
-      clearInterval(timerInterval);
-    };
+  useEffect(() => {
+    fetch('/api/flash-sale')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.success && data.config) {
+          setFlashConfig(data.config);
+          if (Array.isArray(data.products) && data.products.length > 0) {
+            setDynamicFlashProducts(data.products);
+          }
+        }
+      })
+      .catch((err) => console.warn('Could not load flash sale config:', err));
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -609,10 +618,10 @@ export default function Home({
 
   // Filters for Homepage displays (5 products in a line on PC)
   const isFlash = (p: Product) => p.badge === 'SALE' || p.isFlashSale === true;
-  const flashSaleList = products.filter(isFlash);
-  const flashSaleProducts = (flashSaleList.length >= 5 
-    ? flashSaleList 
-    : [...flashSaleList, ...products.filter(p => !isFlash(p))]).slice(0, 5);
+  const activeFlashCatalog = dynamicFlashProducts.length > 0 ? dynamicFlashProducts : products.filter(isFlash);
+  const flashSaleProducts = (activeFlashCatalog.length >= 5 
+    ? activeFlashCatalog 
+    : [...activeFlashCatalog, ...products.filter(p => !isFlash(p))]).slice(0, 5);
 
   const featuredProducts = (products.filter(p => p.category === 'luxury' || p.badge === 'HOT').length >= 5
     ? products.filter(p => p.category === 'luxury' || p.badge === 'HOT')
@@ -806,419 +815,19 @@ export default function Home({
     <div id="homepage-root" className="space-y-12 pb-16">
       {/* Hero Banner & Categories Carousel: Grouped with tighter 16-20px spacing */}
       <div id="hero-and-categories-group" className="space-y-4 sm:space-y-5">
-        {/* 1. Responsive Hero Banner Section */}
-      <section className="w-full max-w-7xl mx-auto px-3 sm:px-6 select-none pt-2">
-        {/* MAIN HERO BANNER: large banner */}
-        <div 
-          id="main-left-hero-banner" 
-          className={`w-full rounded-2xl overflow-hidden relative shadow-lg sm:shadow-xl border border-solid transition-all duration-300 aspect-[16/9] sm:aspect-[2.2/1] md:aspect-[2.6/1] lg:h-[360px] lg:min-h-[360px] lg:max-h-[360px] cursor-pointer group ${
-            isLightMode 
-              ? 'border-[#B9E9EC] bg-neutral-100 shadow-[0_10px_35px_rgba(31,182,192,0.12)]' 
-              : 'border-[#224466]/40 bg-neutral-900 shadow-[0_10px_35px_rgba(0,0,0,0.4)]'
-          }`}
-          onClick={() => onNavigate(activeBanners[leftImageIndex]?.link || 'category_search')}
-          onTouchStart={handleBannerTouchStart}
-          onTouchEnd={handleBannerTouchEnd}
-        >
-          {/* Slides Container */}
-          <div className="absolute inset-0 w-full h-full">
-            {activeBanners.map((banner, idx) => (
-              <div
-                key={banner._id || idx}
-                className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
-                  idx === leftImageIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                }`}
-              >
-                <img 
-                  src={banner.imageUrl} 
-                  alt={banner.title || `Hero Banner ${idx + 1}`} 
-                  referrerPolicy="no-referrer"
-                  loading={idx === 0 ? "eager" : "lazy"}
-                  decoding="async"
-                  width="1200"
-                  height="360"
-                  className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.01]"
-                />
-              </div>
-            ))}
-          </div>
+        {/* 1. Interactive 3-Banner Carousel Section */}
+        <HeroBanners
+          banners={activeBanners}
+          onNavigate={onNavigate}
+          isLightMode={isLightMode}
+        />
 
-          {/* Left Arrow Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setLeftImageIndex((prev) => (prev === 0 ? activeBanners.length - 1 : prev - 1));
-            }}
-            className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-80 sm:opacity-0 group-hover:opacity-100 border border-white/20 active:scale-95 shadow-lg cursor-pointer"
-            aria-label="Previous slide"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-
-          {/* Right Arrow Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setLeftImageIndex((prev) => (prev + 1) % activeBanners.length);
-            }}
-            className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-80 sm:opacity-0 group-hover:opacity-100 border border-white/20 active:scale-95 shadow-lg cursor-pointer"
-            aria-label="Next slide"
-          >
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-
-          {/* Bullet Indicators (Dots) */}
-          <div className="absolute bottom-2.5 sm:bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-black/35 backdrop-blur-md px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border border-white/10">
-            {activeBanners.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLeftImageIndex(idx);
-                }}
-                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                  idx === leftImageIndex 
-                    ? 'bg-[#1FB6C0] scale-110 w-3.5 sm:w-4' 
-                    : 'bg-white/55 hover:bg-white'
-                }`}
-                aria-label={`Go to slide ${idx + 1}`}
-              />
-            ))}
-          </div>
-
-          {/* Small Floating Active Slide Count */}
-          <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 backdrop-blur-md bg-black/50 text-[#1FB6C0] border border-[#1FB6C0]/35 px-2 py-0.5 text-[9px] font-mono rounded tracking-widest font-bold">
-            {leftImageIndex + 1} / {activeBanners.length}
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Categories Grid */}
-      <section className="max-w-7xl mx-auto px-3 sm:px-6">
-        {/* Section Header Row with Heading, Live Catalog indicator, and View All Categories action */}
-        <div className="flex items-center justify-between gap-3 mb-2 sm:mb-2.5 px-1 sm:px-2">
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <h3 className={`text-base sm:text-lg md:text-xl font-extrabold tracking-tight flex items-center gap-2 ${
-              isLightMode ? 'text-[#0F1A3C]' : 'text-white'
-            }`}>
-              <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-[#F5A623]" />
-              <span>Browse <span className="text-[#F5A623]">Categories</span></span>
-            </h3>
-            
-            {/* Live Catalog Pulsing Indicator */}
-            <span className={`inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border transition-colors ${
-              isLightMode
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80 shadow-2xs'
-                : 'bg-emerald-950/60 text-emerald-400 border-emerald-700/60 shadow-2xs'
-            }`}>
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span>Live Catalog</span>
-            </span>
-          </div>
-
-          {/* View All Categories Button */}
-          <button
-            id="open-all-categories-modal"
-            type="button"
-            onClick={() => setIsAllCategoriesModalOpen(true)}
-            className="group/btn text-xs text-[#F5A623] hover:text-amber-500 font-bold uppercase tracking-wider flex items-center gap-1 py-1 px-2.5 rounded-lg transition-all duration-300 hover:translate-x-1 hover:scale-105 active:scale-95 cursor-pointer"
-          >
-            <span>View All</span>
-            <span className="hidden sm:inline">Categories</span>
-            <ChevronRight className="w-4 h-4 text-[#F5A623] transition-transform group-hover/btn:translate-x-0.5" />
-          </button>
-        </div>
-
-<<<<<<< HEAD
-        {/* Categories Carousel Container with smooth scrolling & drag navigation */}
-        <div 
-          className="relative group/carousel py-1"
-          onMouseEnter={() => setIsCatInteracting(true)}
-          onMouseLeave={() => {
-            if (!isDraggingCategory) {
-              clearTimeout(autoScrollResumeTimerRef.current);
-              autoScrollResumeTimerRef.current = setTimeout(() => setIsCatInteracting(false), 2000);
-            }
-          }}
-        >
-          {/* Left Arrow Button */}
-          <button
-            type="button"
-            id="category-scroll-left-btn"
-            onClick={() => handleScrollCategory('left')}
-            aria-label="Scroll categories left"
-            disabled={!canScrollCatLeft}
-            className={`absolute left-0 sm:left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl active:scale-95 ${
-              isLightMode
-                ? 'bg-white text-neutral-800 border-2 border-amber-400 hover:bg-amber-50 hover:text-[#F5A623] hover:border-[#F5A623]'
-                : 'bg-[#0B1330] text-[#F5A623] border-2 border-[#F5A623]/60 hover:bg-[#121E4A] hover:border-[#F5A623] hover:shadow-[0_0_15px_rgba(245,166,35,0.45)]'
-            } ${canScrollCatLeft ? 'opacity-100 cursor-pointer scale-100' : 'opacity-30 cursor-not-allowed scale-90'}`}
-          >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-
-          {/* Right Arrow Button */}
-          <button
-            type="button"
-            id="category-scroll-right-btn"
-            onClick={() => handleScrollCategory('right')}
-            aria-label="Scroll categories right"
-            disabled={!canScrollCatRight}
-            className={`absolute right-0 sm:right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl active:scale-95 ${
-              isLightMode
-                ? 'bg-white text-neutral-800 border-2 border-amber-400 hover:bg-amber-50 hover:text-[#F5A623] hover:border-[#F5A623]'
-                : 'bg-[#0B1330] text-[#F5A623] border-2 border-[#F5A623]/60 hover:bg-[#121E4A] hover:border-[#F5A623] hover:shadow-[0_0_15px_rgba(245,166,35,0.45)]'
-            } ${canScrollCatRight ? 'opacity-100 cursor-pointer scale-100' : 'opacity-30 cursor-not-allowed scale-90'}`}
-          >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-
-          {/* Left & Right Subtle Gradient Fade Masks (pointer-events-none so manual touches & drag pass right through) */}
-          <div
-            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 sm:w-16 z-10 bg-gradient-to-r ${
-              isLightMode
-                ? 'from-white/90 sm:from-white/80 to-transparent'
-                : 'from-[#0B1330]/90 sm:from-[#0B1330]/80 to-transparent'
-            }`}
-          />
-          <div
-            className={`pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-16 z-10 bg-gradient-to-l ${
-              isLightMode
-                ? 'from-white/90 sm:from-white/80 to-transparent'
-                : 'from-[#0B1330]/90 sm:from-[#0B1330]/80 to-transparent'
-            }`}
-          />
-
-          {/* Horizontally Scrollable & Draggable Track */}
-          <div
-            ref={categoryScrollRef}
-            onScroll={handleCategoryScroll}
-            onMouseDown={(e) => {
-              if (!categoryScrollRef.current) return;
-              setIsDraggingCategory(true);
-              setIsCatInteracting(true);
-              categoryDragStartXRef.current = e.pageX;
-              categoryDragStartScrollLeftRef.current = categoryScrollRef.current.scrollLeft;
-              hasDraggedRef.current = false;
-              clearTimeout(autoScrollResumeTimerRef.current);
-            }}
-            onTouchStart={(e) => {
-              setIsCatInteracting(true);
-              clearTimeout(autoScrollResumeTimerRef.current);
-              touchStartXRef.current = e.touches[0].clientX;
-              touchHasMovedRef.current = false;
-            }}
-            onTouchMove={(e) => {
-              if (Math.abs(e.touches[0].clientX - touchStartXRef.current) > 8) {
-                touchHasMovedRef.current = true;
-                hasDraggedRef.current = true;
-              }
-            }}
-            onTouchEnd={() => {
-              clearTimeout(autoScrollResumeTimerRef.current);
-              autoScrollResumeTimerRef.current = setTimeout(() => {
-                setIsCatInteracting(false);
-                touchHasMovedRef.current = false;
-                hasDraggedRef.current = false;
-              }, 2200);
-            }}
-            className="flex gap-3 sm:gap-6 overflow-x-auto scrollbar-hide py-2.5 px-3 sm:px-6 cursor-grab active:cursor-grabbing select-none touch-pan-y"
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-y',
-            }}
-          >
-=======
-        {/* Categories Carousel Container with seamless background */}
-        <div className="relative overflow-hidden py-1">
-          {/* Left & Right gradient fade masks for seamless edge transitions */}
-          <div 
-            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-6 sm:w-16 z-10 bg-gradient-to-r transition-colors duration-300 ${
-              isLightMode 
-                ? 'from-white/90 via-white/40 to-transparent' 
-                : 'from-[#0B1330]/90 via-[#0B1330]/40 to-transparent'
-            }`} 
-          />
-          <div 
-            className={`pointer-events-none absolute right-0 top-0 bottom-0 w-6 sm:w-16 z-10 bg-gradient-to-l transition-colors duration-300 ${
-              isLightMode 
-                ? 'from-white/90 via-white/40 to-transparent' 
-                : 'from-[#0B1330]/90 via-[#0B1330]/40 to-transparent'
-            }`} 
-          />
-
-          {/* Marquee Track: Duplicated list translated by -50% for zero-jump continuous infinite animation */}
-          <div
-            className="group relative flex overflow-hidden py-2 select-none"
-            onMouseEnter={() => setIsCategoryMarqueePaused(true)}
-            onMouseLeave={() => setIsCategoryMarqueePaused(false)}
-            onTouchStart={() => setIsCategoryMarqueePaused(true)}
-            onTouchEnd={() => {
-              // Graceful timeout so user can comfortably tap/inspect without immediate movement
-              setTimeout(() => setIsCategoryMarqueePaused(false), 900);
-            }}
-          >
-            <div
-              className="flex gap-3 sm:gap-6 shrink-0 animate-category-marquee"
-              style={{
-                animationPlayState: isCategoryMarqueePaused ? 'paused' : 'running',
-              }}
-            >
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
-              {[
-                ...CATEGORIES.filter((c) => c.id !== 'all'),
-                ...CATEGORIES.filter((c) => c.id !== 'all')
-              ].map((cat, idx) => {
-                const theme = getCategoryTheme(cat.id);
-
-                // Find representative product image from products data matching category
-                const representativeProduct = products.find((p) => {
-                  if (cat.id === 'wholesale') return p.category === 'wholesale' || p.isWholesale;
-                  if (cat.id === 'delivery') return p.eligibleFor20MinDelivery || p.category === 'delivery';
-                  if (cat.id === 'grocery') return p.category === 'grocery' || p.category === 'kirana';
-                  if (cat.id === 'food_delivery') return p.category === 'food_delivery' || p.category === 'food';
-                  return p.category === cat.id;
-                });
-
-                // Thumbnail photo: custom category image > first matching product image > curated Unsplash fallback
-                const thumbnailImage = cat.image || representativeProduct?.image || CATEGORY_FALLBACK_IMAGES[cat.id];
-
-                return (
-                  <div
-                    key={`${cat.id}-${idx}`}
-                    id={`cat-card-${cat.id}-${idx}`}
-<<<<<<< HEAD
-                    onClick={(e) => {
-                      if (hasDraggedRef.current || touchHasMovedRef.current) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        return;
-                      }
-                      onNavigate('category_search', cat.id);
-                    }}
-=======
-                    onClick={() => onNavigate('category_search', cat.id)}
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
-                    className="group/card relative cursor-pointer w-28 sm:w-36 md:w-40 shrink-0 flex flex-col items-center select-none transition-all duration-300 transform-gpu active:scale-95"
-                  >
-                    {/* Thumbnail Frame (Rounded Square with soft shadow) */}
-                    <div
-                      className={`relative w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-2xl overflow-hidden transition-all duration-300 group-hover/card:-translate-y-1.5 ${
-                        isLightMode
-                          ? 'border border-neutral-200/90 bg-neutral-100 shadow-[0_4px_16px_-2px_rgba(0,0,0,0.06)] group-hover/card:shadow-[0_10px_24px_-4px_rgba(0,0,0,0.12)]'
-                          : 'border border-white/10 bg-neutral-800 shadow-[0_4px_16px_-2px_rgba(0,0,0,0.4)] group-hover/card:shadow-[0_10px_24px_-4px_rgba(0,0,0,0.6)]'
-                      }`}
-                    >
-                      {/* Pill Badge in Top-Right Corner */}
-                      {cat.badge && (
-                        <span
-                          className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[7.5px] sm:text-[8.5px] font-black uppercase tracking-wider text-white shadow-md z-20 pointer-events-none transition-transform duration-300 group-hover/card:scale-105"
-                          style={{ backgroundColor: cat.badge.color }}
-                        >
-                          {cat.badge.text}
-                        </span>
-                      )}
-
-                      {/* Express 20 MIN badge if applicable */}
-                      {cat.eligibleFor20MinDelivery && (
-                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full text-[6.5px] sm:text-[7.5px] font-black tracking-wider uppercase bg-gradient-to-r from-amber-500 to-red-500 text-white shadow-xs z-20 flex items-center gap-0.5">
-                          <span>⚡</span>
-                          <span>20 MIN</span>
-                        </span>
-                      )}
-
-                      {thumbnailImage ? (
-                        <div className="relative w-full h-full overflow-hidden">
-                          <img
-                            src={thumbnailImage}
-                            alt={cat.label}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
-                          />
-                          {/* Soft bottom vignette for image grounding */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
-                        </div>
-                      ) : (
-                        /* Fallback icon-badge style if image is unavailable */
-                        <div className={`w-full h-full flex items-center justify-center ${theme.gradient} text-white`}>
-                          {getCategoryIcon(cat.icon, "w-8 h-8 sm:w-10 sm:h-10", 2.2)}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Category Labels: Bold English Name + Muted Bengali Translation Subtitle */}
-                    <div className="mt-2 sm:mt-2.5 px-1 w-full text-center">
-                      <h4
-                        className={`font-extrabold text-[12px] sm:text-[13.5px] uppercase tracking-wide truncate transition-colors duration-200 ${
-                          isLightMode
-                            ? 'text-neutral-900 group-hover/card:text-[#F5A623]'
-                            : 'text-neutral-100 group-hover/card:text-[#F5A623]'
-                        }`}
-                      >
-                        {cat.label}
-                      </h4>
-
-                      <p
-                        className={`text-[10px] sm:text-[11.5px] font-medium truncate mt-0.5 transition-colors ${
-                          isLightMode ? 'text-neutral-500' : 'text-neutral-400'
-                        }`}
-                      >
-                        {cat.labelBn || cat.label}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-<<<<<<< HEAD
-
-        {/* Pure CSS Keyframes for infinite marquee with hover & touch pause */}
-        <style>{`
-          .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-          .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-          }
-=======
-        </div>
-
-        {/* Pure CSS Keyframes for infinite marquee with hover & touch pause */}
-        <style>{`
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
-          @keyframes category-marquee-slide {
-            0% {
-              transform: translate3d(0, 0, 0);
-            }
-            100% {
-              transform: translate3d(-50%, 0, 0);
-            }
-          }
-          .animate-category-marquee {
-            display: flex;
-            width: max-content;
-            animation: category-marquee-slide 32s linear infinite;
-            will-change: transform;
-          }
-          @media (hover: hover) {
-            .animate-category-marquee:hover {
-              animation-play-state: paused !important;
-            }
-          }
-          @media (max-width: 640px) {
-            .animate-category-marquee {
-              /* Smooth, relaxed pacing on mobile touch screens for easier tapping and reading */
-              animation-duration: 40s;
-            }
-          }
-        `}</style>
-      </section>
+        {/* 2. Interactive Category Carousel */}
+        <CategoryCarousel
+          onNavigate={onNavigate}
+          isLightMode={isLightMode}
+          onOpenAllCategories={() => setIsAllCategoriesModalOpen(true)}
+        />
       </div>
 
       {/* 3. Top Banner Features (2 Service Cards) */}
@@ -1270,51 +879,37 @@ export default function Home({
         </div>
       </section>
 
-      {/* 4. Flash Sale Section (With 24h Countdown) */}
-      <section className="max-w-7xl mx-auto px-6 p-6 bg-[#E9E9E7] border border-solid border-[#F5A623]/40 rounded-2xl shadow-md text-[#0F1A3C]">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-solid border-neutral-300/80 pb-4 mb-6">
+      {/* 4. Flash Sale Section (With Real-Time Countdown & Dynamic Config) */}
+      <section className="max-w-7xl mx-auto px-6 p-6 bg-[#E9E9E7] dark:bg-neutral-900 border border-solid border-[#F5A623]/40 rounded-2xl shadow-md text-[#0F1A3C] dark:text-white">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-solid border-neutral-300/80 dark:border-neutral-800 pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-white text-[#F5A623] border border-[#F5A623]/30 shadow-2xs">
+            <span className="p-2 rounded-xl bg-white dark:bg-[#0A1028] text-[#F5A623] border border-[#F5A623]/30 shadow-2xs">
               <Zap className="w-6 h-6 fill-[#F5A623] text-[#F5A623]" />
             </span>
             <div>
               <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-                <h3 className="text-xl md:text-2xl font-black text-[#0F1A3C] tracking-wide uppercase">
-                  Flash <span className="text-[#F5A623]">Premium Hours</span>
+                <h3 className="text-xl md:text-2xl font-black text-[#0F1A3C] dark:text-white tracking-wide uppercase">
+                  {flashConfig.title}
                 </h3>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black tracking-wider uppercase bg-gradient-to-r from-amber-500 via-[#F5A623] to-[#D4AF37] text-white shadow-[0_2px_10px_rgba(245,166,35,0.35)] border border-amber-300/60 select-none">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                {flashConfig.bannerText && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black tracking-wider uppercase bg-gradient-to-r from-amber-500 via-[#F5A623] to-[#D4AF37] text-white shadow-[0_2px_10px_rgba(245,166,35,0.35)] border border-amber-300/60 select-none">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                    </span>
+                    <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current text-white shrink-0" />
+                    <span className="font-extrabold">{flashConfig.bannerText}</span>
                   </span>
-                  <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current text-white shrink-0" />
-                  <span className="font-extrabold">
-                    <span className="sm:hidden">⚡ Deals Refresh in 24H!</span>
-                    <span className="hidden sm:inline">⚡ Deals Refresh Every 24 Hours — Don't Miss Out!</span>
-                  </span>
-                </span>
+                )}
               </div>
-              <p className="text-xs text-neutral-600 font-medium mt-0.5">Uncompromised pricing on luxury gear</p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium mt-0.5">
+                {flashConfig.subtitle}
+              </p>
             </div>
           </div>
 
-          {/* Golden Countdown timer */}
-          <div className="flex items-center gap-2 text-[#0F1A3C]">
-            <span className="text-[10px] uppercase font-bold text-neutral-600 tracking-wider mr-1">Time Left:</span>
-            <div className="flex gap-1.5 font-mono font-bold text-sm">
-              <div className="bg-white text-[#0F1A3C] border border-neutral-300/80 px-2.5 py-1.5 rounded-lg font-black shadow-xs">
-                {timer.hours}
-              </div>
-              <span className="self-center text-[#F5A623] font-black">:</span>
-              <div className="bg-white text-[#0F1A3C] border border-neutral-300/80 px-2.5 py-1.5 rounded-lg font-black shadow-xs">
-                {timer.minutes}
-              </div>
-              <span className="self-center text-[#F5A623] font-black">:</span>
-              <div className="bg-white text-[#0F1A3C] border border-neutral-300/80 px-2.5 py-1.5 rounded-lg font-black shadow-xs">
-                {timer.seconds}
-              </div>
-            </div>
-          </div>
+          {/* Golden Real-time Live Countdown timer */}
+          <FlashCountdown targetEndTime={flashConfig.targetEndTime} />
         </div>
 
         {/* Dynamic products in grid (5 in a row on PC) */}

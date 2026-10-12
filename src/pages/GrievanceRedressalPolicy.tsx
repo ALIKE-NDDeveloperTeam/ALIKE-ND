@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-<<<<<<< HEAD
 import { CONTACT_PHONE } from '../config/constants';
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 import { 
   Scale, 
   ShieldCheck, 
@@ -215,11 +212,7 @@ export const GrievanceRedressalPolicy: React.FC<GrievanceRedressalPolicyProps> =
                     </a>
                     <p className="text-neutral-500 pt-1">Direct Helpline:</p>
                     <p className="font-mono font-bold text-[#0F1A3C] dark:text-white">
-<<<<<<< HEAD
                       {CONTACT_PHONE}
-=======
-                      +91 3824 XXXXXX [PLACEHOLDER — REPLACE WITH ACTUAL DETAILS]
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                     </p>
                   </div>
                 </div>
@@ -246,11 +239,7 @@ export const GrievanceRedressalPolicy: React.FC<GrievanceRedressalPolicyProps> =
                     </a>
                     <p className="text-neutral-500 pt-1">Law Enforcement Contact:</p>
                     <p className="font-mono font-bold text-[#0F1A3C] dark:text-white">
-<<<<<<< HEAD
                       {CONTACT_PHONE}
-=======
-                      +91 9436 XXXXXX [PLACEHOLDER — REPLACE WITH ACTUAL DETAILS]
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                     </p>
                   </div>
                 </div>

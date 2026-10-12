@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, Heart, GitCompare, ShoppingCart, Star, PackageOpen, Check, Store, Zap } from 'lucide-react';
 import { Product } from '../types';
-<<<<<<< HEAD
 import FavoriteButton from './FavoriteButton';
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 interface ProductCardProps {
   product: Product;
@@ -117,14 +114,14 @@ export default function ProductCard({
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108 block"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-950 text-neutral-600 gap-1.5 p-3">
-            <PackageOpen className="w-6 h-6 opacity-40 text-neutral-400" />
-            <span className="text-[9px] font-mono text-neutral-400 font-bold">{brand}</span>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-neutral-900 to-neutral-950 text-neutral-400 gap-1.5 p-4 select-none border border-dashed border-neutral-800">
+            <PackageOpen className="w-8 h-8 opacity-60 text-[#F5A623]" />
+            <span className="text-[10px] font-mono text-neutral-300 font-extrabold uppercase tracking-wider">{brand || 'Atelier'}</span>
+            <span className="text-[9.5px] text-neutral-500 font-medium text-center line-clamp-1">{name}</span>
           </div>
         )}
 
         {/* Action Buttons overlay positioned inside image container */}
-<<<<<<< HEAD
         <div className={`absolute top-2 right-2 flex flex-col gap-1.5 ${isWishlisted ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'} transition-all duration-200 z-10 items-center`}>
           <FavoriteButton
             id={`wishlist-btn-${id}`}
@@ -135,31 +132,6 @@ export default function ProductCard({
             }}
             title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
           />
-=======
-        <div className={`absolute top-2 right-2 flex flex-col gap-1 ${isWishlisted ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'} transition-all duration-200 z-10`}>
-          <button
-            id={`wishlist-btn-${id}`}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleWishlist(product);
-            }}
-            className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md active:scale-90 cursor-pointer product-action-btn flex items-center justify-center group/heartbtn ${
-              isWishlisted
-                ? 'bg-rose-500/20 dark:bg-rose-950/50 border border-rose-400/60 text-rose-500 shadow-[0_2px_12px_rgba(244,63,94,0.3)] hover:bg-rose-500/30'
-                : 'bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/85 border border-white/70 dark:border-white/20 text-neutral-600 dark:text-white/80 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-300/70 dark:hover:border-rose-500/40 hover:shadow-[0_2px_12px_rgba(244,63,94,0.2)]'
-            }`}
-            title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
-          >
-            <Heart
-              className={`w-3.5 h-3.5 transition-all duration-200 ${
-                isWishlisted
-                  ? 'fill-red-500 text-red-500 hover:text-red-600 animate-heart-pop'
-                  : 'group-hover/heartbtn:scale-115 group-hover/heartbtn:text-rose-500 stroke-[2.2]'
-              }`}
-            />
-          </button>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
           <button
             id={`quickview-btn-${id}`}
             type="button"

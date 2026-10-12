@@ -1,0 +1,348 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+export interface BannerItem {
+  _id?: string;
+  id?: string | number;
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  buttonText?: string;
+  imageUrl: string;
+  link?: string;
+  linkUrl?: string;
+  order?: number;
+  active?: boolean;
+  isActive?: boolean;
+  isCenterFeatured?: boolean;
+}
+
+export interface HeroBannersProps {
+  banners: BannerItem[];
+  onNavigate: (view: string, filter?: string) => void;
+  isLightMode?: boolean;
+  autoPlayInterval?: number;
+  className?: string;
+}
+
+const FALLBACK_BANNER_IMG =
+  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&auto=format&fit=crop&q=80';
+
+const getSafeImageUrl = (url?: string): string => {
+  if (!url || typeof url !== 'string' || url.trim() === '' || url.includes('photo-1580907115718-4c8abd021ae5')) {
+    return 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1600&auto=format&fit=crop&q=80';
+  }
+  return url;
+};
+
+export const HeroBanners: React.FC<HeroBannersProps> = ({
+  banners = [],
+  onNavigate,
+  isLightMode = false,
+  autoPlayInterval = 3800,
+  className = '',
+}) => {
+  // Filter active banners and ensure at least 1 banner exists
+  const activeBanners = useMemo(() => {
+    const list = banners.filter((b) => b.active !== false && b.isActive !== false);
+    return list.length > 0 ? list : banners;
+  }, [banners]);
+
+  // Center / Featured index
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const featuredIdx = activeBanners.findIndex((b) => b.isCenterFeatured);
+    return featuredIdx !== -1 ? featuredIdx : 0;
+  });
+
+  const [isHovered, setIsHovered] = useState(false);
+  const touchStartXRef = useRef<number | null>(null);
+  const total = activeBanners.length;
+
+  // Handlers for circular carousel movement
+  const nextSlide = useCallback(() => {
+    if (total <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % total);
+  }, [total]);
+
+  const prevSlide = useCallback(() => {
+    if (total <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + total) % total);
+  }, [total]);
+
+  const goToSlide = (index: number) => {
+    setCurrentIndex(index);
+  };
+
+  // Smooth, high-performance auto-play slideshow (pauses gracefully on hover)
+  useEffect(() => {
+    if (total <= 1 || isHovered) return;
+
+    const timer = setInterval(() => {
+      nextSlide();
+    }, autoPlayInterval);
+
+    return () => clearInterval(timer);
+  }, [total, isHovered, autoPlayInterval, nextSlide]);
+
+  // Touch Swipe handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartXRef.current - touchEndX;
+
+    if (diff > 45) {
+      nextSlide();
+    } else if (diff < -45) {
+      prevSlide();
+    }
+    touchStartXRef.current = null;
+  };
+
+  // Safe image error handler to prevent broken image icons
+  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.currentTarget;
+    target.onerror = null;
+    target.src = FALLBACK_BANNER_IMG;
+  };
+
+  if (total === 0) return null;
+
+  const handleBannerClick = (banner: BannerItem) => {
+    const destination = banner.linkUrl || banner.link || 'category_search';
+    onNavigate(destination);
+  };
+
+  /**
+   * Calculates GPU-accelerated 3D carousel position for each banner slide on Desktop.
+   * Gives a butter-smooth 60fps sliding motion when auto-running or clicking!
+   */
+  const getDesktopCardStyle = (index: number) => {
+    let diff = (index - currentIndex + total) % total;
+    if (diff > total / 2) diff -= total;
+
+    if (diff === 0) {
+      // CENTER HERO (Prominent, scale 1.04, golden highlight aura)
+      return {
+        transform: 'translate(-50%, 0) scale(1.04)',
+        left: '50%',
+        zIndex: 25,
+        opacity: 1,
+        pointerEvents: 'auto' as const,
+        boxShadow: isLightMode
+          ? '0 20px 50px rgba(245, 166, 35, 0.28), 0 0 35px rgba(245, 166, 35, 0.2)'
+          : '0 25px 65px rgba(0, 0, 0, 0.85), 0 0 40px rgba(245, 166, 35, 0.35)',
+        borderColor: '#F5A623',
+      };
+    } else if (diff === -1) {
+      // LEFT PREVIEW CARD (Flanking, scale 0.92, offset to left)
+      return {
+        transform: 'translate(-142%, 0) scale(0.92)',
+        left: '50%',
+        zIndex: 10,
+        opacity: 0.78,
+        pointerEvents: 'auto' as const,
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+        borderColor: isLightMode ? '#E8DEC9' : 'rgba(255, 255, 255, 0.12)',
+      };
+    } else if (diff === 1) {
+      // RIGHT PREVIEW CARD (Flanking, scale 0.92, offset to right)
+      return {
+        transform: 'translate(42%, 0) scale(0.92)',
+        left: '50%',
+        zIndex: 10,
+        opacity: 0.78,
+        pointerEvents: 'auto' as const,
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+        borderColor: isLightMode ? '#E8DEC9' : 'rgba(255, 255, 255, 0.12)',
+      };
+    } else if (diff < -1) {
+      // OFF-SCREEN LEFT (Sliding out to the left)
+      return {
+        transform: 'translate(-230%, 0) scale(0.8)',
+        left: '50%',
+        zIndex: 5,
+        opacity: 0,
+        pointerEvents: 'none' as const,
+        boxShadow: 'none',
+        borderColor: 'transparent',
+      };
+    } else {
+      // OFF-SCREEN RIGHT (Sliding in from the right)
+      return {
+        transform: 'translate(130%, 0) scale(0.8)',
+        left: '50%',
+        zIndex: 5,
+        opacity: 0,
+        pointerEvents: 'none' as const,
+        boxShadow: 'none',
+        borderColor: 'transparent',
+      };
+    }
+  };
+
+  /**
+   * Calculates mobile slide position with smooth sliding motion
+   */
+  const getMobileCardStyle = (index: number) => {
+    let diff = (index - currentIndex + total) % total;
+    if (diff > total / 2) diff -= total;
+
+    if (diff === 0) {
+      return {
+        transform: 'translate(-50%, 0) scale(1)',
+        left: '50%',
+        zIndex: 20,
+        opacity: 1,
+        pointerEvents: 'auto' as const,
+      };
+    } else if (diff === -1) {
+      return {
+        transform: 'translate(-150%, 0) scale(0.92)',
+        left: '50%',
+        zIndex: 10,
+        opacity: 0,
+        pointerEvents: 'none' as const,
+      };
+    } else if (diff === 1) {
+      return {
+        transform: 'translate(50%, 0) scale(0.92)',
+        left: '50%',
+        zIndex: 10,
+        opacity: 0,
+        pointerEvents: 'none' as const,
+      };
+    } else {
+      return {
+        transform: 'translate(150%, 0) scale(0.85)',
+        left: '50%',
+        zIndex: 5,
+        opacity: 0,
+        pointerEvents: 'none' as const,
+      };
+    }
+  };
+
+  return (
+    <section
+      id="hero-carousel-root"
+      aria-label="Featured Collections Carousel"
+      className={`hero-banner-isolate w-full max-w-7xl mx-auto px-3 sm:px-6 select-none relative pt-2 pb-4 ${className}`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* ========================================================
+          DESKTOP 3-BANNER SLIDING TRACK (md / lg screens)
+          Cards physically slide across the screen with smooth 60fps easing
+          ======================================================== */}
+      <div className="hidden md:block relative w-full h-[390px] lg:h-[440px] overflow-hidden py-3">
+        {activeBanners.map((banner, idx) => {
+          const style = getDesktopCardStyle(idx);
+          const isCenter = idx === currentIndex;
+
+          return (
+            <div
+              key={banner._id || idx}
+              onClick={() => {
+                if (isCenter) {
+                  handleBannerClick(banner);
+                } else {
+                  goToSlide(idx);
+                }
+              }}
+              title={isCenter ? 'Click to explore collection' : 'Click to bring to center'}
+              style={style}
+              className={`absolute top-3 w-[50%] lg:w-[52%] h-[365px] lg:h-[415px] rounded-2xl lg:rounded-3xl overflow-hidden cursor-pointer border-2 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] group ${
+                isCenter
+                  ? 'bg-neutral-950 ring-1 ring-amber-400/30'
+                  : isLightMode
+                    ? 'bg-neutral-900 border-[#E8DEC9]'
+                    : 'bg-neutral-950 border-white/10'
+              }`}
+            >
+              {/* Center Radiant Top Light Spill Accent */}
+              {isCenter && (
+                <>
+                  <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-transparent via-[#F5A623] to-transparent z-30" />
+                  <div className="absolute -top-12 inset-x-1/4 h-24 bg-[#F5A623]/30 blur-3xl pointer-events-none z-10" />
+                </>
+              )}
+
+              {/* High-Resolution Clean Banner Image */}
+              <img
+                src={getSafeImageUrl(banner.imageUrl)}
+                alt=""
+                loading={isCenter ? 'eager' : 'lazy'}
+                onError={handleImgError}
+                className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+              />
+
+              {/* Subtle Ambient Vignette for Depth */}
+              <div
+                className={`absolute inset-0 transition-opacity duration-700 pointer-events-none ${
+                  isCenter ? 'bg-black/10' : 'bg-black/25'
+                }`}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ========================================================
+          MOBILE SLIDING CAROUSEL (Responsive Swipeable Track)
+          ======================================================== */}
+      <div className="md:hidden relative w-full h-[230px] sm:h-[290px] overflow-hidden py-2">
+        {activeBanners.map((banner, idx) => {
+          const style = getMobileCardStyle(idx);
+
+          return (
+            <div
+              key={banner._id || idx}
+              onClick={() => handleBannerClick(banner)}
+              style={style}
+              className="absolute top-2 w-[92%] h-[215px] sm:h-[275px] rounded-2xl overflow-hidden shadow-2xl border-2 border-[#F5A623] cursor-pointer bg-neutral-950 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+            >
+              <img
+                src={getSafeImageUrl(banner.imageUrl)}
+                alt=""
+                loading="lazy"
+                onError={handleImgError}
+                className="w-full h-full object-cover object-center"
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ========================================================
+          SLICK NAVIGATION ARROWS (Clean, luxury frosted chevrons)
+          ======================================================== */}
+      {/* Previous Arrow */}
+      <button
+        type="button"
+        onClick={prevSlide}
+        className="absolute left-1.5 sm:left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all shadow-[0_10px_25px_rgba(0,0,0,0.5)] hover:scale-108 active:scale-95 cursor-pointer"
+        aria-label="Previous banner"
+      >
+        <ChevronLeft className="w-6 h-6 text-white" />
+      </button>
+
+      {/* Next Arrow */}
+      <button
+        type="button"
+        onClick={nextSlide}
+        className="absolute right-1.5 sm:right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-xl border border-white/20 flex items-center justify-center transition-all shadow-[0_10px_25px_rgba(0,0,0,0.5)] hover:scale-108 active:scale-95 cursor-pointer"
+        aria-label="Next banner"
+      >
+        <ChevronRight className="w-6 h-6 text-white" />
+      </button>
+    </section>
+  );
+};
+
+export default HeroBanners;

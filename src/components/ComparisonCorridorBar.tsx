@@ -13,29 +13,32 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   onCompare,
 }) => {
   return (
-    <div className="flex items-center space-x-3 shrink-0">
-      {/* Purge Matrix Button (Subtle red/rose border theme with clean text) */}
+    <div className="flex items-center gap-3 shrink-0">
+      {/* 1. Destructive Action: Subtle secondary button with light grayish/red hover, clean border */}
       <button
         type="button"
         id="purge-matrix-btn"
         onClick={onPurge}
-        className="flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 hover:border-rose-500/60 text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider shadow-xs hover:shadow-rose-500/10 active:scale-95 transition-all cursor-pointer"
-        title="Clear all compared items"
+        className="h-10 sm:h-11 px-4 py-2 rounded-xl border border-rose-200 hover:border-rose-300 dark:border-rose-800/80 dark:hover:border-rose-700 bg-rose-50/70 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 select-none"
+        title="Clear Comparison Matrix"
       >
-        <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
-        <span>Purge Matrix</span>
+        <Trash2 className="w-4 h-4 stroke-[2]" />
+        <span>Clear Comparison</span>
       </button>
 
-      {/* Compare Specs Button (High-contrast solid amber/gold primary CTA with bold dark text) */}
+      {/* 2. Primary Action: High-contrast sleek slate/indigo CTA with modern counter badge and glow */}
       <button
         type="button"
         id="compare-specs-btn"
         onClick={onCompare}
-        className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:brightness-105 active:scale-95 transition-all cursor-pointer border border-amber-400/40"
+        className="h-10 sm:h-11 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider transition-all duration-200 flex items-center gap-2 cursor-pointer shadow-md shadow-indigo-500/20 dark:shadow-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 border border-slate-700/50 dark:border-indigo-400/40 select-none group/btn"
         title={`Compare ${count} selected creations`}
       >
-        <GitCompare className="w-3.5 h-3.5 stroke-[2.5]" />
-        <span>Compare Specs ({count})</span>
+        <GitCompare className="w-4 h-4 text-indigo-400 dark:text-indigo-200 transition-transform group-hover/btn:scale-110" />
+        <span>Compare Specs</span>
+        <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-semibold shrink-0">
+          {count}
+        </span>
       </button>
     </div>
   );

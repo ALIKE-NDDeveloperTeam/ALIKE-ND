@@ -33,10 +33,7 @@ import {
 import { Product } from '../types';
 import { CATEGORIES } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
-<<<<<<< HEAD
 import FavoriteButton from '../components/FavoriteButton';
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 
 interface SearchPageProps {
   products: Product[];
@@ -109,15 +106,6 @@ export default function SearchPage({
   };
 
   const handleQuerySubmit = (q: string) => {
-    const termLower = q.trim().toLowerCase();
-    if (termLower === 'admin' || termLower === 'superadmin') {
-      setInternalQuery('');
-      if (onSearchChange) onSearchChange('');
-      if (onNavigate) {
-        onNavigate('admin');
-      }
-      return;
-    }
     setInternalQuery(q);
     if (onSearchChange) onSearchChange(q);
   };
@@ -436,7 +424,6 @@ export default function SearchPage({
                             </span>
                           )}
                           <div className={`absolute top-2 right-2 z-10 ${isWish ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover/thumb:opacity-100'} transition-opacity`}>
-<<<<<<< HEAD
                             <FavoriteButton
                               id={`wishlist-btn-thumb-${product.id}`}
                               isLiked={isWish}
@@ -446,30 +433,6 @@ export default function SearchPage({
                               }}
                               title={isWish ? 'Remove from Wishlist' : 'Add to Wishlist'}
                             />
-=======
-                            <button
-                              id={`wishlist-btn-thumb-${product.id}`}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleWishlist(product);
-                              }}
-                              className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 shadow-md active:scale-90 cursor-pointer product-action-btn flex items-center justify-center group/heartbtn ${
-                                isWish
-                                  ? 'bg-rose-500/20 dark:bg-rose-950/50 border border-rose-400/60 text-rose-500 shadow-[0_2px_12px_rgba(244,63,94,0.3)] hover:bg-rose-500/30'
-                                  : 'bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/85 border border-white/70 dark:border-white/20 text-neutral-600 dark:text-white/80 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-300/70 dark:hover:border-rose-500/40 hover:shadow-[0_2px_12px_rgba(244,63,94,0.2)]'
-                              }`}
-                              title={isWish ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                            >
-                              <Heart
-                                className={`w-3.5 h-3.5 transition-all duration-200 ${
-                                  isWish
-                                    ? 'fill-red-500 text-red-500 hover:text-red-600 animate-heart-pop'
-                                    : 'group-hover/heartbtn:scale-115 group-hover/heartbtn:text-rose-500 stroke-[2.2]'
-                                }`}
-                              />
-                            </button>
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
                           </div>
                         </div>
 

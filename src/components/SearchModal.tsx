@@ -111,14 +111,6 @@ export default function SearchModal({
   }, [isOpen, onClose]);
 
   const handleExecuteSearch = (searchTerm: string, category: string = selectedCategory) => {
-    const termLower = searchTerm.trim().toLowerCase();
-    if (termLower === 'admin' || termLower === 'superadmin') {
-      if (onNavigate) {
-        onNavigate('admin');
-      }
-      onClose();
-      return;
-    }
     onSearch(searchTerm, category);
     onClose();
   };

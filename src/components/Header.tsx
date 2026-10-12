@@ -17,6 +17,7 @@ import {
   Store,
   Wallet,
   Settings,
+  Headphones,
   Sun,
   Moon,
   Home,
@@ -120,11 +121,6 @@ export default function Header({
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault();
     const trimmed = searchQuery.trim().toLowerCase();
-    if (trimmed === 'admin' || trimmed === 'superadmin') {
-      setSearchQuery('');
-      onNavigate('admin');
-      return;
-    }
     if (!trimmed) {
       onSearch('');
       onNavigate('search');
@@ -494,6 +490,35 @@ export default function Header({
                       <Settings className="w-3.5 h-3.5" />
                       Settings
                     </button>
+                    <button
+                      id="menu-btn-support"
+                      onClick={() => {
+                        onNavigate('support');
+                        setUserDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-xs flex items-center gap-2 transition-colors ${
+                        isLightMode ? 'hover:bg-neutral-50 text-neutral-700' : 'hover:bg-neutral-800 hover:text-white text-neutral-300'
+                      }`}
+                    >
+                      <Headphones className="w-3.5 h-3.5 text-amber-500" />
+                      Support
+                    </button>
+                    {/* Admin Console Shortcut for Administrators */}
+                    {Boolean((user as any)?.isAdmin || (user as any)?.adminToken || (user as any)?.role === 'admin' || (user as any)?.role === 'superadmin' || (typeof window !== 'undefined' && (localStorage.getItem('alikend_admin_token') || localStorage.getItem('alikend_staff_token')))) && (
+                      <button
+                        id="menu-btn-admin-console"
+                        onClick={() => {
+                          onNavigate('admin');
+                          setUserDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-xs flex items-center gap-2 font-bold text-amber-500 hover:text-amber-400 transition-colors ${
+                          isLightMode ? 'hover:bg-amber-50' : 'hover:bg-neutral-800'
+                        }`}
+                      >
+                        <Shield className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Admin Console</span>
+                      </button>
+                    )}
                     {/* Seller Option - CONDITIONAL: ONLY one option rendered based on approved seller status */}
                     {isApprovedSeller ? (
                       <button
@@ -768,6 +793,17 @@ export default function Header({
                 >
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
+                </button>
+
+                <button
+                  id="mobile-menu-btn-support"
+                  onClick={() => { setMobileMenuOpen(false); onNavigate('support'); }}
+                  className={`w-full text-left px-3 py-2 text-xs font-medium rounded-lg flex items-center gap-2.5 transition-colors ${
+                    isLightMode ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-300 hover:bg-neutral-900'
+                  }`}
+                >
+                  <Headphones className="w-4 h-4 text-amber-500" />
+                  <span>Support Center</span>
                 </button>
 
                 {/* Mobile Seller Option - CONDITIONAL */}

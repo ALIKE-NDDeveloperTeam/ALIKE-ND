@@ -17,6 +17,7 @@ import {
   Sparkles,
   Sofa,
   Zap,
+  Flame,
 } from 'lucide-react';
 import GlassCloseButton from './GlassCloseButton';
 import { CATEGORIES } from '../data/mockData';
@@ -115,6 +116,20 @@ export const getModalCategoryTheme = (catId: string) => {
         shadow: 'shadow-[0_8px_20px_-4px_rgba(236,72,153,0.4)]',
         border: 'border-pink-300/40',
       };
+    case 'perfumes':
+      return {
+        gradient: 'bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-800',
+        glow: 'bg-purple-500/25',
+        shadow: 'shadow-[0_8px_20px_-4px_rgba(168,85,247,0.4)]',
+        border: 'border-purple-300/40',
+      };
+    case 'personal_care':
+      return {
+        gradient: 'bg-gradient-to-br from-sky-400 via-cyan-500 to-teal-600',
+        glow: 'bg-cyan-400/25',
+        shadow: 'shadow-[0_8px_20px_-4px_rgba(6,182,212,0.4)]',
+        border: 'border-cyan-300/40',
+      };
     case 'furniture':
       return {
         gradient: 'bg-gradient-to-br from-teal-400 via-emerald-500 to-teal-700',
@@ -160,6 +175,7 @@ export const renderCategoryIcon = (iconName: string, className = 'w-6 h-6') => {
     case 'Gamepad2': return <Gamepad2 className={className} />;
     case 'Wrench': return <Wrench className={className} />;
     case 'Sparkles': return <Sparkles className={className} />;
+    case 'Flame': return <Flame className={className} />;
     case 'Sofa': return <Sofa className={className} />;
     case 'Zap': return <Zap className={className} />;
     default: return <LayoutGrid className={className} />;
