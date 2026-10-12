@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { escapeHtml } from "../utils/escapeHtml";
 
 export function getMailerTransporter(): any {
   const user = process.env.GMAIL_USER?.trim();
@@ -12,33 +13,17 @@ export function getMailerTransporter(): any {
   // causes stale/dead socket reuse and long timeouts when functions unfreeze.
   // Using direct connection with tight socket timeouts ensures rapid delivery.
   return nodemailer.createTransport({
-<<<<<<< HEAD
     service: "gmail",
-=======
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Direct SSL handshake is faster and more reliable than STARTTLS on 587
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     auth: {
       user,
       pass,
     },
-<<<<<<< HEAD
     connectionTimeout: 10000, // 10s connection timeout
     greetingTimeout: 8000,    // 8s greeting timeout
     socketTimeout: 15000,     // 15s socket timeout
-=======
-    connectionTimeout: 8000, // 8s connection timeout
-    greetingTimeout: 5000,   // 5s greeting timeout
-    socketTimeout: 10000,    // 10s socket timeout
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
-    tls: {
-      rejectUnauthorized: false,
-    },
   });
 }
 
-<<<<<<< HEAD
 export interface OrderItemNotification {
   title: string;
   quantity: number;
@@ -107,10 +92,10 @@ export async function sendSellerOrderNotification(sellerEmail: string, orderDeta
       <p style="font-size: 12px; color: #777; margin: 4px 0 14px 0;"><strong>Purchase Timestamp:</strong> ${timestamp}</p>
 
       <div class="section-title">Customer Details</div>
-      <p style="font-size: 13px; margin: 4px 0;"><strong>Name:</strong> ${orderDetails.customerName || "Valued Customer"}</p>
-      <p style="font-size: 13px; margin: 4px 0;"><strong>Email:</strong> ${orderDetails.customerEmail || "Not specified"}</p>
-      <p style="font-size: 13px; margin: 4px 0;"><strong>Phone:</strong> ${orderDetails.phone || "Not specified"}</p>
-      <p style="font-size: 13px; margin: 4px 0;"><strong>Address:</strong> ${orderDetails.address || "Standard Atelier Destination"}</p>
+      <p style="font-size: 13px; margin: 4px 0;"><strong>Name:</strong> ${escapeHtml(orderDetails.customerName || "Valued Customer")}</p>
+      <p style="font-size: 13px; margin: 4px 0;"><strong>Email:</strong> ${escapeHtml(orderDetails.customerEmail || "Not specified")}</p>
+      <p style="font-size: 13px; margin: 4px 0;"><strong>Phone:</strong> ${escapeHtml(orderDetails.phone || "Not specified")}</p>
+      <p style="font-size: 13px; margin: 4px 0;"><strong>Address:</strong> ${escapeHtml(orderDetails.address || "Standard Atelier Destination")}</p>
 
       <div class="section-title">Purchased Items</div>
       <table class="item-table">
@@ -124,8 +109,8 @@ export async function sendSellerOrderNotification(sellerEmail: string, orderDeta
         <tbody>
           ${(orderDetails.items || []).map((item) => `
             <tr>
-              <td>${item.title || "Luxury Product"}</td>
-              <td>${item.quantity || 1}</td>
+              <td>${escapeHtml(item.title || "Luxury Product")}</td>
+              <td>${escapeHtml(item.quantity || 1)}</td>
               <td>₹${Number(item.price || 0).toLocaleString("en-IN")}</td>
             </tr>
           `).join("")}
@@ -135,7 +120,7 @@ export async function sendSellerOrderNotification(sellerEmail: string, orderDeta
       <div style="margin-top: 15px; font-weight: bold; font-size: 14px; border-top: 1px solid #eee; padding-top: 10px;">
         Total Amount: ₹${Number(orderDetails.totalAmount || 0).toLocaleString("en-IN")}
       </div>
-      ${orderDetails.paymentMethod ? `<p style="font-size: 12px; color: #555; margin: 4px 0;">Payment Method: <strong>${orderDetails.paymentMethod}</strong></p>` : ""}
+      ${orderDetails.paymentMethod ? `<p style="font-size: 12px; color: #555; margin: 4px 0;">Payment Method: <strong>${escapeHtml(orderDetails.paymentMethod)}</strong></p>` : ""}
       ${orderDetails.sellerPayout ? `<p style="font-size: 12px; color: #15803d; margin: 4px 0;">Seller Payout Summary: <strong>₹${Number(orderDetails.sellerPayout).toLocaleString("en-IN")}</strong></p>` : ""}
     </div>
   </body>
@@ -201,10 +186,10 @@ export async function sendCustomerOrderConfirmation(customerEmail: string, order
   <body>
     <div class="container">
       <div class="header">
-        🎉 Order Confirmed! #${orderDetails.orderId}
+        🎉 Order Confirmed! #${escapeHtml(orderDetails.orderId)}
       </div>
 
-      <p style="font-size: 14px; color: #222;">Dear <strong>${orderDetails.customerName || "Valued Customer"}</strong>,</p>
+      <p style="font-size: 14px; color: #222;">Dear <strong>${escapeHtml(orderDetails.customerName || "Valued Customer")}</strong>,</p>
       <p style="font-size: 13px; color: #444; line-height: 1.6;">
         Thank you for shopping on <strong>ALIKE ND</strong>! Your order has been placed successfully and has entered preparation at our atelier fulfillment terminal.
       </p>
@@ -214,9 +199,9 @@ export async function sendCustomerOrderConfirmation(customerEmail: string, order
       </div>
 
       <div class="section-title">Delivery Destination</div>
-      <p style="font-size: 13px; margin: 4px 0;"><strong>Recipient:</strong> ${orderDetails.customerName}</p>
-      <p style="font-size: 13px; margin: 4px 0;"><strong>Phone:</strong> ${orderDetails.phone || "Registered phone"}</p>
-      <p style="font-size: 13px; margin: 4px 0;"><strong>Address:</strong> ${orderDetails.address}</p>
+      <p style="font-size: 13px; margin: 4px 0;"><strong>Recipient:</strong> ${escapeHtml(orderDetails.customerName)}</p>
+      <p style="font-size: 13px; margin: 4px 0;"><strong>Phone:</strong> ${escapeHtml(orderDetails.phone || "Registered phone")}</p>
+      <p style="font-size: 13px; margin: 4px 0;"><strong>Address:</strong> ${escapeHtml(orderDetails.address)}</p>
 
       <div class="section-title">Purchased Items</div>
       <table class="item-table">
@@ -230,8 +215,8 @@ export async function sendCustomerOrderConfirmation(customerEmail: string, order
         <tbody>
           ${(orderDetails.items || []).map((item) => `
             <tr>
-              <td>${item.title || "Luxury Product"}</td>
-              <td>${item.quantity || 1}</td>
+              <td>${escapeHtml(item.title || "Luxury Product")}</td>
+              <td>${escapeHtml(item.quantity || 1)}</td>
               <td>₹${Number(item.price || 0).toLocaleString("en-IN")}</td>
             </tr>
           `).join("")}
@@ -241,7 +226,7 @@ export async function sendCustomerOrderConfirmation(customerEmail: string, order
       <div style="margin-top: 15px; font-weight: bold; font-size: 14px; border-top: 1px solid #eee; padding-top: 10px; color: #0F1A3C;">
         Total Amount: ₹${Number(orderDetails.totalAmount || 0).toLocaleString("en-IN")}
       </div>
-      ${orderDetails.paymentMethod ? `<p style="font-size: 12px; color: #555; margin: 4px 0;">Payment: <strong>${orderDetails.paymentMethod}</strong></p>` : ""}
+      ${orderDetails.paymentMethod ? `<p style="font-size: 12px; color: #555; margin: 4px 0;">Payment: <strong>${escapeHtml(orderDetails.paymentMethod)}</strong></p>` : ""}
 
       <p style="font-size: 11px; color: #888; margin-top: 24px; border-top: 1px solid #eee; padding-top: 12px; text-align: center;">
         Track live dispatch progress in your ALIKE ND Order Book. Concierge Hotline: +91 1800-254-5363
@@ -393,8 +378,6 @@ export async function dispatchOrderNotificationEmails(orderData: any) {
   }
 }
 
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
 export async function sendOtpEmail(toEmail: string, otpCode: string, purpose: string = "verification") {
   const user = process.env.GMAIL_USER?.trim();
   const pass = process.env.GMAIL_APP_PASSWORD?.trim();

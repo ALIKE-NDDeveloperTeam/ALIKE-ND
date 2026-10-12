@@ -22,6 +22,8 @@ router.get("/", async (_req, res) => {
             (o) => o.memberName?.toLowerCase() === u.fullName?.toLowerCase() || o.memberEmail?.toLowerCase() === u.email?.toLowerCase()
           );
           const spend = userOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+          const isAutoVip = userOrders.length > 10;
+          const normalizedTier = (u.tier === "VIP" || u.tier === "Platinum" || isAutoVip) ? "VIP" : "Normal";
 
           return {
             _id: String(u._id),
@@ -30,7 +32,7 @@ router.get("/", async (_req, res) => {
             phone: u.phone || `${u.country} ${u.mobileNumber}`,
             country: u.country,
             mobileNumber: u.mobileNumber,
-            tier: u.tier || "Silver",
+            tier: normalizedTier,
             isBlocked: Boolean(u.isBlocked),
             verified: Boolean(u.verified),
             ordersCount: userOrders.length,
@@ -46,20 +48,26 @@ router.get("/", async (_req, res) => {
     }
 
     // In-memory fallback
-    const memList = (memoryStore.users || []).map((u) => ({
-      _id: u._id,
-      name: u.fullName,
-      email: u.email,
-      phone: u.phone || `${u.country} ${u.mobileNumber}`,
-      country: u.country,
-      mobileNumber: u.mobileNumber,
-      tier: u.tier,
-      isBlocked: false,
-      verified: true,
-      ordersCount: 0,
-      lifetimeSpend: 0,
-      createdAt: u.createdAt,
-    }));
+    const memList = (memoryStore.users || []).map((u) => {
+      const userOrders = (memoryStore.orders || []).filter(
+        (o) => o.memberName?.toLowerCase() === u.fullName?.toLowerCase() || o.memberEmail?.toLowerCase() === u.email?.toLowerCase()
+      );
+      const isAutoVip = userOrders.length > 10;
+      return {
+        _id: u._id,
+        name: u.fullName,
+        email: u.email,
+        phone: u.phone || `${u.country} ${u.mobileNumber}`,
+        country: u.country,
+        mobileNumber: u.mobileNumber,
+        tier: ((u.tier as string) === "VIP" || u.tier === "Platinum" || isAutoVip) ? "VIP" : "Normal",
+        isBlocked: false,
+        verified: true,
+        ordersCount: userOrders.length,
+        lifetimeSpend: userOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0),
+        createdAt: u.createdAt,
+      };
+    });
 
     return res.json(memList.length > 0 ? memList : memoryStore.customers);
   } catch (err: any) {
@@ -115,16 +123,29 @@ router.patch("/:id/block", requireSuperAdmin, async (req, res) => {
 router.patch("/:id/tier", requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { tier } = req.body;
-    if (!["Silver", "Gold", "Platinum"].includes(tier)) {
+    let { tier } = req.body;
+    if (!["VIP", "Normal", "Silver", "Gold", "Platinum"].includes(tier)) {
       return res.status(400).json({ error: "Invalid tier value" });
     }
+    const finalTier = tier === "VIP" ? "VIP" : "Normal";
 
     if (isMongoConnected()) {
-      const updatedUser = await User.findByIdAndUpdate(id, { tier }, { new: true });
+      const updatedUser = await User.findByIdAndUpdate(id, { tier: finalTier }, { new: true });
       if (updatedUser) {
-        return res.json({ success: true, user: updatedUser });
+        return res.json({
+          success: true,
+          user: {
+            ...updatedUser.toObject(),
+            tier: finalTier,
+          },
+        });
       }
+    }
+
+    const userInMem = (memoryStore.users || []).find((u) => u._id === id || u.email === id);
+    if (userInMem) {
+      userInMem.tier = finalTier as any;
+      return res.json({ success: true, user: userInMem });
     }
 
     return res.status(404).json({ error: "User document not found in database" });

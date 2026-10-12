@@ -2,12 +2,13 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IUser extends Document {
   fullName: string;
+  username?: string;
   email: string;
   country: string;
   mobileNumber: string;
   phone?: string;
   passwordHash: string;
-  tier: "Silver" | "Gold" | "Platinum";
+  tier: "Silver" | "Gold" | "Platinum" | "VIP" | "Normal";
   verified: boolean;
   isBlocked: boolean;
   createdAt: Date;
@@ -17,12 +18,13 @@ export interface IUser extends Document {
 const UserSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
+    username: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     country: { type: String, required: true, trim: true },
     mobileNumber: { type: String, required: true, trim: true },
     phone: { type: String, trim: true },
     passwordHash: { type: String, required: true },
-    tier: { type: String, enum: ["Silver", "Gold", "Platinum"], default: "Silver" },
+    tier: { type: String, enum: ["Silver", "Gold", "Platinum", "VIP", "Normal"], default: "Normal" },
     verified: { type: Boolean, default: true },
     isBlocked: { type: Boolean, default: false },
   },

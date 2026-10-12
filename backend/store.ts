@@ -6,6 +6,7 @@ import Customer from "./models/Customer";
 import Product from "./models/Product";
 import ActivityLog from "./models/ActivityLog";
 import Banner from "./models/Banner";
+import Category from "./models/Category";
 import PlatformSetting from "./models/PlatformSetting";
 
 export interface InMemoryStore {
@@ -14,13 +15,17 @@ export interface InMemoryStore {
     email: string;
     passwordHash: string;
     name: string;
-    role: "superadmin" | "admin";
+    role: string;
+    phone?: string;
+    department?: string;
+    designation?: string;
     isActive?: boolean;
     createdAt?: Date;
   }>;
   users: Array<{
     _id: string;
     fullName: string;
+    username?: string;
     email: string;
     country: string;
     mobileNumber: string;
@@ -129,8 +134,24 @@ export interface InMemoryStore {
     description?: string;
     buttonText?: string;
     link?: string;
+    linkUrl?: string;
     order: number;
     active: boolean;
+    isActive?: boolean;
+    isCenterFeatured?: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }>;
+  categories: Array<{
+    _id: string;
+    titleEn: string;
+    titleBn: string;
+    imageUrl: string;
+    badgeText?: string;
+    badgeColor?: string;
+    redirectUrl: string;
+    order: number;
+    isActive: boolean;
     createdAt?: Date;
     updatedAt?: Date;
   }>;
@@ -172,14 +193,136 @@ export interface InMemoryStore {
     createdAt: Date;
     updatedAt: Date;
   }>;
+  flashSaleConfig?: {
+    title: string;
+    subtitle: string;
+    bannerText: string;
+    targetEndTime: Date;
+    activeProducts: Array<{
+      productId: string | number;
+      flashPrice?: number;
+      discountPercent?: number;
+      isFeatured?: boolean;
+      order?: number;
+    }>;
+    updatedAt: Date;
+  };
+  hotlines: Array<{
+    _id: string;
+    name: string;
+    phoneNumber: string;
+    extension?: string;
+    department: string;
+    description?: string;
+    operatingHours: string;
+    whatsappNumber?: string;
+    emailAddress?: string;
+    isEmergency: boolean;
+    isPriority: boolean;
+    isActive: boolean;
+    displayOrder: number;
+    callClickCount: number;
+    createdBy: string;
+    lastModifiedBy?: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  tickets: Array<{
+    _id: string;
+    ticketId: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    customerId?: string;
+    subject: string;
+    description: string;
+    category: string;
+    subcategory?: string;
+    priority: "Low" | "Normal" | "High" | "Urgent";
+    status: "New" | "Open" | "In Progress" | "Waiting for Customer" | "Escalated" | "Resolved" | "Closed";
+    assignedAgentId?: string;
+    assignedAgentName?: string;
+    assignedDepartment: string;
+    replies: Array<{
+      id: string;
+      authorType: "staff" | "customer";
+      authorName: string;
+      authorEmail: string;
+      message: string;
+      attachments?: Array<{
+        name: string;
+        url: string;
+        size: number;
+        mimeType: string;
+      }>;
+      isInternalNote: boolean;
+      createdAt: Date;
+    }>;
+    tags: string[];
+    csatRating?: number;
+    csatFeedback?: string;
+    resolvedAt?: Date;
+    closedAt?: Date;
+    slaDeadline?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  knowledgeArticles: Array<{
+    _id: string;
+    title: string;
+    category: string;
+    summary: string;
+    content: string;
+    status: "published" | "draft" | "archived";
+    viewsCount: number;
+    helpfulCount: number;
+    tags: string[];
+    author: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  supportAgents: Array<{
+    _id: string;
+    name: string;
+    email: string;
+    role: "Support Agent" | "Support Manager" | "Head of Care" | "Admin";
+    department: string;
+    status: "Active" | "Away" | "Offline";
+    assignedTicketsCount: number;
+    resolvedTicketsCount: number;
+    avgCsat: number;
+    phone?: string;
+    createdAt: Date;
+  }>;
+  customerCareAuditLogs: Array<{
+    _id: string;
+    action: string;
+    targetId: string;
+    targetType: "hotline" | "ticket" | "agent" | "faq" | "settings";
+    performedBy: string;
+    details: string;
+    ip: string;
+    createdAt: Date;
+  }>;
+  customerCareSettings: {
+    autoResponderEnabled: boolean;
+    autoResponderMessage: string;
+    workingHoursNotice: string;
+    emergencyBannerText: string;
+    emergencyBannerActive: boolean;
+    whatsappChatEnabled: boolean;
+    emailNotificationsEnabled: boolean;
+    defaultSlaHours: number;
+    updatedAt: Date;
+  };
 }
 
 // Initial seed hash and credentials derived from environment variables
-const INITIAL_ADMIN_SEED_PASSWORD = process.env.INITIAL_ADMIN_PASSWORD || process.env.ADMIN_SEED_PASSWORD || "admin123";
-const INITIAL_ADMIN_SEED_HASH = bcrypt.hashSync(INITIAL_ADMIN_SEED_PASSWORD, 10);
-const INITIAL_SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL?.trim().toLowerCase() || "developer.alikend@gmail.com";
-const INITIAL_SUPERADMIN_NAME = process.env.SUPERADMIN_NAME?.trim() || "Super Admin";
-const INITIAL_STAFF_EMAIL = process.env.STAFF_ADMIN_EMAIL?.trim().toLowerCase() || "admin234@gmail.com";
+export const INITIAL_ADMIN_SEED_PASSWORD = process.env.INITIAL_ADMIN_PASSWORD || process.env.ADMIN_SEED_PASSWORD || "";
+export const INITIAL_ADMIN_SEED_HASH = INITIAL_ADMIN_SEED_PASSWORD ? bcrypt.hashSync(INITIAL_ADMIN_SEED_PASSWORD, 10) : "";
+export const INITIAL_SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL?.trim().toLowerCase() || "developer.alikend@gmail.com";
+export const INITIAL_SUPERADMIN_NAME = process.env.SUPERADMIN_NAME?.trim() || "Super Admin";
+export const INITIAL_STAFF_EMAIL = process.env.STAFF_ADMIN_EMAIL?.trim().toLowerCase() || "admin234@gmail.com";
 
 export const INITIAL_BANNERS_SEED = [
   {
@@ -203,7 +346,7 @@ export const INITIAL_BANNERS_SEED = [
     active: true,
   },
   {
-    imageUrl: "https://images.unsplash.com/photo-1580907115718-4c8abd021ae5?w=1200&auto=format&fit=crop&q=75&fm=webp",
+    imageUrl: "https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1600&auto=format&fit=crop&q=80",
     title: "B2B Volume Wholesale Deals",
     subtitle: "DIRECT BULK IMPORTS FROM ATELIER LEADERS",
     description: "Secure Persian saffron lots, bulk fast-charger boxes, and designer satin wraps directly. Save up to 45% with our transparent tier grids.",
@@ -647,6 +790,129 @@ export const INITIAL_PRODUCTS_SEED = [
   },
 ];
 
+export const INITIAL_CATEGORIES_SEED = [
+  {
+    titleEn: "Luxury Atelier",
+    titleBn: "বিলাসবহুল সংগ্রহ",
+    imageUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "HOT",
+    badgeColor: "#EF4444",
+    redirectUrl: "category_search",
+    order: 1,
+    isActive: true,
+  },
+  {
+    titleEn: "VIP Membership",
+    titleBn: "ভিআইপি মেম্বারশিপ",
+    imageUrl: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "EXCLUSIVE",
+    badgeColor: "#8B5CF6",
+    redirectUrl: "category_search",
+    order: 2,
+    isActive: true,
+  },
+  {
+    titleEn: "Flagship Mobiles",
+    titleBn: "ফ্ল্যাগশিপ মোবাইল",
+    imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "NEW",
+    badgeColor: "#3B82F6",
+    redirectUrl: "category_search",
+    order: 3,
+    isActive: true,
+  },
+  {
+    titleEn: "Performance Laptops",
+    titleBn: "ল্যাপটপ ও গ্যাজেট",
+    imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "GEAR",
+    badgeColor: "#10B981",
+    redirectUrl: "category_search",
+    order: 4,
+    isActive: true,
+  },
+  {
+    titleEn: "Haute Couture Fashion",
+    titleBn: "ফ্যাশন পোশাক",
+    imageUrl: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "TRENDING",
+    badgeColor: "#EC4899",
+    redirectUrl: "category_search",
+    order: 5,
+    isActive: true,
+  },
+  {
+    titleEn: "Artisan Fine Jewellery",
+    titleBn: "আভিজাত্য জুয়েলারি",
+    imageUrl: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "HOT",
+    badgeColor: "#F59E0B",
+    redirectUrl: "category_search",
+    order: 6,
+    isActive: true,
+  },
+  {
+    titleEn: "Pro Tier Gaming",
+    titleBn: "প্রো গেমিং গিয়ার",
+    imageUrl: "https://images.unsplash.com/photo-1612287233219-c90a18413a96?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "GEAR",
+    badgeColor: "#6366F1",
+    redirectUrl: "category_search",
+    order: 7,
+    isActive: true,
+  },
+  {
+    titleEn: "20-Min Express",
+    titleBn: "দ্রুত ডেলিভারি",
+    imageUrl: "https://images.unsplash.com/photo-1526367790999-0150786686a2?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "ACTIVE",
+    badgeColor: "#10B981",
+    redirectUrl: "category_search",
+    order: 8,
+    isActive: true,
+  },
+  {
+    titleEn: "Curated Living & Decor",
+    titleBn: "ফার্নিচার ও সাজসজ্জা",
+    imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "TRENDING",
+    badgeColor: "#14B8A6",
+    redirectUrl: "category_search",
+    order: 9,
+    isActive: true,
+  },
+  {
+    titleEn: "Prestige Beauty",
+    titleBn: "সৌন্দর্য ও প্রসাধন",
+    imageUrl: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "NEW",
+    badgeColor: "#F43F5E",
+    redirectUrl: "category_search",
+    order: 10,
+    isActive: true,
+  },
+  {
+    titleEn: "Industrial Hardware",
+    titleBn: "হার্ডওয়্যার ও টুলস",
+    imageUrl: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "ACTIVE",
+    badgeColor: "#F97316",
+    redirectUrl: "category_search",
+    order: 11,
+    isActive: true,
+  },
+  {
+    titleEn: "Fresh Gourmet Grocery",
+    titleBn: "মুদি ও গ্রোসারি",
+    imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400&fm=webp",
+    badgeText: "ACTIVE",
+    badgeColor: "#84CC16",
+    redirectUrl: "category_search",
+    order: 12,
+    isActive: true,
+  },
+];
+
 export const memoryStore: InMemoryStore = {
   // Master Superadmin AND Regular Staff Admin accounts
   admins: [
@@ -839,6 +1105,12 @@ export const memoryStore: InMemoryStore = {
     createdAt: new Date(),
     updatedAt: new Date(),
   })),
+  categories: INITIAL_CATEGORIES_SEED.map((c, i) => ({
+    ...c,
+    _id: `cat_seed_${i + 1}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })),
   platformSettings: {
     commissionRate: 5,
     platformBalance: 393,
@@ -848,6 +1120,506 @@ export const memoryStore: InMemoryStore = {
   platformWithdrawals: [],
   sellerWithdrawals: [],
   otps: [],
+  flashSaleConfig: {
+    title: "FLASH PREMIUM HOURS",
+    subtitle: "Uncompromised pricing on luxury gear",
+    bannerText: "⚡ Deals Refresh Every 24 Hours — Don't Miss Out!",
+    targetEndTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    activeProducts: [
+      { productId: "prod_2", flashPrice: 89999, discountPercent: 44, isFeatured: true, order: 1 },
+      { productId: "prod_7", flashPrice: 19999, discountPercent: 43, isFeatured: true, order: 2 },
+      { productId: "prod_9", flashPrice: 17999, discountPercent: 38, isFeatured: false, order: 3 },
+      { productId: "prod_10", flashPrice: 12999, discountPercent: 35, isFeatured: false, order: 4 },
+      { productId: "prod_11", flashPrice: 1299, discountPercent: 48, isFeatured: false, order: 5 },
+    ],
+    updatedAt: new Date(),
+  },
+  hotlines: [
+    {
+      _id: "htl_1",
+      name: "Master Executive Concierge",
+      phoneNumber: "+880 1800-254-536",
+      extension: "Ext 101",
+      department: "Executive Concierge",
+      description: "Direct priority line for high-net-worth orders, custom commissions & executive inquiries.",
+      operatingHours: "24/7 Round the Clock",
+      whatsappNumber: "+880 1800-254-536",
+      emailAddress: "concierge@alike-nd.com",
+      isEmergency: false,
+      isPriority: true,
+      isActive: true,
+      displayOrder: 1,
+      callClickCount: 184,
+      createdBy: "Super Admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "htl_2",
+      name: "Order Tracking & Delivery Helpline",
+      phoneNumber: "+880 1800-254-537",
+      extension: "Ext 202",
+      department: "Order Support",
+      description: "Real-time courier dispatch status, address modifications, and 20-min express tracking.",
+      operatingHours: "08:00 AM - 11:00 PM Daily",
+      whatsappNumber: "+880 1800-254-537",
+      emailAddress: "orders@alike-nd.com",
+      isEmergency: false,
+      isPriority: false,
+      isActive: true,
+      displayOrder: 2,
+      callClickCount: 412,
+      createdBy: "Super Admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "htl_3",
+      name: "Technical Support & Warranty Claims",
+      phoneNumber: "+880 1800-254-538",
+      extension: "Ext 303",
+      department: "Technical & IT",
+      description: "App troubleshooting, payment gateway assistance, digital receipts & device warranty claims.",
+      operatingHours: "09:00 AM - 08:00 PM (Sat-Thu)",
+      whatsappNumber: "+880 1800-254-538",
+      emailAddress: "tech@alike-nd.com",
+      isEmergency: false,
+      isPriority: false,
+      isActive: true,
+      displayOrder: 3,
+      callClickCount: 96,
+      createdBy: "Super Admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "htl_4",
+      name: "VIP Platinum Private Desk",
+      phoneNumber: "+880 1800-254-539",
+      extension: "Ext 777",
+      department: "VIP & High Value",
+      description: "Reserved exclusively for verified Platinum members with dedicated personal care managers.",
+      operatingHours: "24/7 Dedicated Line",
+      whatsappNumber: "+880 1800-254-539",
+      emailAddress: "vip@alike-nd.com",
+      isEmergency: false,
+      isPriority: true,
+      isActive: true,
+      displayOrder: 4,
+      callClickCount: 145,
+      createdBy: "Super Admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "htl_5",
+      name: "24/7 Security & Fraud Escalation",
+      phoneNumber: "+880 1800-254-999",
+      extension: "Urgent",
+      department: "General Inquiries",
+      description: "Instant response for unauthorized account access, payment anomalies, and urgent fraud flags.",
+      operatingHours: "24/7 Immediate Escalation",
+      whatsappNumber: "+880 1800-254-999",
+      emailAddress: "security@alike-nd.com",
+      isEmergency: true,
+      isPriority: true,
+      isActive: true,
+      displayOrder: 5,
+      callClickCount: 52,
+      createdBy: "Super Admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "htl_6",
+      name: "Billing, Escrow & Refund Helpline",
+      phoneNumber: "+880 1800-254-540",
+      extension: "Ext 404",
+      department: "Billing & Refunds",
+      description: "Queries regarding card chargebacks, bKash/Nagad reversals, tax invoices, and refunds.",
+      operatingHours: "09:00 AM - 06:00 PM Daily",
+      whatsappNumber: "+880 1800-254-540",
+      emailAddress: "billing@alike-nd.com",
+      isEmergency: false,
+      isPriority: false,
+      isActive: true,
+      displayOrder: 6,
+      callClickCount: 219,
+      createdBy: "Super Admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ],
+  tickets: [
+    {
+      _id: "tkt_seed_1",
+      ticketId: "TKT-2026-1042",
+      customerName: "Vikram Malhotra",
+      customerEmail: "vikram@example.com",
+      customerPhone: "+880 1711-223344",
+      customerId: "cust_1",
+      subject: "Expedited delivery request for Royal Chronograph",
+      description: "I placed order AN-5201 for the Royal Chronograph. Need delivery expedited before Friday for an anniversary gift.",
+      category: "Order Tracking",
+      subcategory: "Express Courier Request",
+      priority: "High",
+      status: "In Progress",
+      assignedAgentId: "agt_1",
+      assignedAgentName: "Zara Ahmed",
+      assignedDepartment: "Order Support",
+      replies: [
+        {
+          id: "rep_101",
+          authorType: "customer",
+          authorName: "Vikram Malhotra",
+          authorEmail: "vikram@example.com",
+          message: "Could you please confirm if this can be dispatched with the 20-min express courier team?",
+          isInternalNote: false,
+          createdAt: new Date(Date.now() - 3600000 * 5),
+        },
+        {
+          id: "rep_102",
+          authorType: "staff",
+          authorName: "Zara Ahmed (Support Agent)",
+          authorEmail: "zara.care@alike-nd.com",
+          message: "Greetings Mr. Malhotra! We have prioritized your order AN-5201 with the premium warehouse courier team. Expected dispatch window is tomorrow 10:00 AM.",
+          isInternalNote: false,
+          createdAt: new Date(Date.now() - 3600000 * 3),
+        },
+        {
+          id: "rep_103",
+          authorType: "staff",
+          authorName: "Zara Ahmed (Support Agent)",
+          authorEmail: "zara.care@alike-nd.com",
+          message: "Internal Note: Contacted hub manager to double-bubble wrap and provide VIP gift seal.",
+          isInternalNote: true,
+          createdAt: new Date(Date.now() - 3600000 * 2),
+        },
+      ],
+      tags: ["VIP", "Order AN-5201", "FastTrack"],
+      slaDeadline: new Date(Date.now() + 3600000 * 8),
+      createdAt: new Date(Date.now() - 3600000 * 6),
+      updatedAt: new Date(Date.now() - 3600000 * 2),
+    },
+    {
+      _id: "tkt_seed_2",
+      ticketId: "TKT-2026-1043",
+      customerName: "Nusrat Jahan",
+      customerEmail: "nusrat@example.com",
+      customerPhone: "+880 1722-334455",
+      customerId: "cust_2",
+      subject: "Shipping address update prior to dispatch",
+      description: "Please update the apartment number from Apt 4B to Penthouse 12A for order AN-5202.",
+      category: "Order Tracking",
+      subcategory: "Address Correction",
+      priority: "Normal",
+      status: "Open",
+      assignedAgentId: "agt_2",
+      assignedAgentName: "Fahim Rahman",
+      assignedDepartment: "Order Support",
+      replies: [
+        {
+          id: "rep_201",
+          authorType: "customer",
+          authorName: "Nusrat Jahan",
+          authorEmail: "nusrat@example.com",
+          message: "Please ensure the delivery rider has the updated apartment buzzer code.",
+          isInternalNote: false,
+          createdAt: new Date(Date.now() - 3600000 * 2),
+        },
+      ],
+      tags: ["Address Change", "Pending Action"],
+      slaDeadline: new Date(Date.now() + 3600000 * 12),
+      createdAt: new Date(Date.now() - 3600000 * 2),
+      updatedAt: new Date(Date.now() - 3600000 * 2),
+    },
+    {
+      _id: "tkt_seed_3",
+      ticketId: "TKT-2026-1044",
+      customerName: "Tanvir Ahmed",
+      customerEmail: "tanvir@example.com",
+      customerPhone: "+880 1733-445566",
+      customerId: "cust_3",
+      subject: "Package arrived with damaged outer luxury box",
+      description: "The exterior courier box had a dent which penetrated the audio equipment presentation carton. Requesting swift replacement unit.",
+      category: "Defective / Damaged Product",
+      subcategory: "Courier Transit Damage",
+      priority: "Urgent",
+      status: "Escalated",
+      assignedAgentId: "agt_3",
+      assignedAgentName: "Imran Hossain",
+      assignedDepartment: "Technical & IT",
+      replies: [
+        {
+          id: "rep_301",
+          authorType: "customer",
+          authorName: "Tanvir Ahmed",
+          authorEmail: "tanvir@example.com",
+          message: "Attaching photos of the unboxing. Equipment is untouched but box is crushed.",
+          isInternalNote: false,
+          createdAt: new Date(Date.now() - 3600000 * 8),
+        },
+        {
+          id: "rep_302",
+          authorType: "staff",
+          authorName: "Imran Hossain (Support Manager)",
+          authorEmail: "imran.manager@alike-nd.com",
+          message: "Internal Note: Escalated directly to logistics quality auditor. Replacement unit placed on hold for immediate swap dispatch upon customer pickup.",
+          isInternalNote: true,
+          createdAt: new Date(Date.now() - 3600000 * 4),
+        },
+        {
+          id: "rep_303",
+          authorType: "staff",
+          authorName: "Imran Hossain (Support Manager)",
+          authorEmail: "imran.manager@alike-nd.com",
+          message: "Dear Mr. Tanvir, our apologies for the transit issue. Our executive courier will arrive at your door today with a brand-new factory-sealed replacement and collect the damaged carton at zero charge.",
+          isInternalNote: false,
+          createdAt: new Date(Date.now() - 3600000 * 3),
+        },
+      ],
+      tags: ["Damage Claim", "Courier Escalation", "Swap"],
+      slaDeadline: new Date(Date.now() + 3600000 * 2),
+      createdAt: new Date(Date.now() - 3600000 * 8),
+      updatedAt: new Date(Date.now() - 3600000 * 3),
+    },
+    {
+      _id: "tkt_seed_4",
+      ticketId: "TKT-2026-1045",
+      customerName: "Ayesha Siddiqua",
+      customerEmail: "ayesha@example.com",
+      customerPhone: "+880 1744-556677",
+      customerId: "cust_4",
+      subject: "Platinum membership private concierge activation",
+      description: "I recently reached Platinum status and would like information on how to schedule a private stylist consultation.",
+      category: "General Inquiry",
+      subcategory: "VIP Concierge",
+      priority: "Normal",
+      status: "Resolved",
+      assignedAgentId: "agt_4",
+      assignedAgentName: "Sarah Jenkins",
+      assignedDepartment: "Executive Concierge",
+      replies: [
+        {
+          id: "rep_401",
+          authorType: "staff",
+          authorName: "Sarah Jenkins (Head of Care)",
+          authorEmail: "sarah.lead@alike-nd.com",
+          message: "Welcome to ALIKE-ND Platinum! Your private concierge desk is now active on WhatsApp (+880 1800-254-539). We have assigned your personal stylist for bespoke consultation.",
+          isInternalNote: false,
+          createdAt: new Date(Date.now() - 3600000 * 18),
+        },
+      ],
+      tags: ["VIP", "Platinum", "Onboarding"],
+      csatRating: 5,
+      csatFeedback: "Superb and fast response from the concierge team!",
+      resolvedAt: new Date(Date.now() - 3600000 * 16),
+      closedAt: new Date(Date.now() - 3600000 * 16),
+      createdAt: new Date(Date.now() - 3600000 * 24),
+      updatedAt: new Date(Date.now() - 3600000 * 16),
+    },
+    {
+      _id: "tkt_seed_5",
+      ticketId: "TKT-2026-1046",
+      customerName: "Rahim Chowdhury",
+      customerEmail: "rahim@example.com",
+      customerPhone: "+880 1755-667788",
+      customerId: "cust_5",
+      subject: "Refund status for returned Italian leather folio",
+      description: "Returned item was received at your hub 2 days ago. Inquiring about credit reversal timeline to my original Visa card.",
+      category: "Refund & Return",
+      subcategory: "Card Reversal",
+      priority: "High",
+      status: "Waiting for Customer",
+      assignedAgentId: "agt_1",
+      assignedAgentName: "Zara Ahmed",
+      assignedDepartment: "Billing & Refunds",
+      replies: [
+        {
+          id: "rep_501",
+          authorType: "staff",
+          authorName: "Zara Ahmed (Support Agent)",
+          authorEmail: "zara.care@alike-nd.com",
+          message: "Dear Mr. Rahim, our quality inspection approved your return. Please confirm the last 4 digits of your payment card so our billing team can cross-verify the bank transaction.",
+          isInternalNote: false,
+          createdAt: new Date(Date.now() - 3600000 * 7),
+        },
+      ],
+      tags: ["Refund", "Billing"],
+      slaDeadline: new Date(Date.now() + 3600000 * 14),
+      createdAt: new Date(Date.now() - 3600000 * 14),
+      updatedAt: new Date(Date.now() - 3600000 * 7),
+    },
+  ],
+  knowledgeArticles: [
+    {
+      _id: "faq_1",
+      title: "How do I track my luxury courier dispatch?",
+      category: "Orders & Delivery",
+      summary: "Step-by-step instructions for real-time tracking, SMS PIN verification, and 20-min express fulfillment.",
+      content: "All orders placed on ALIKE-ND are assigned a tracked luxury dispatch number. Once packed at our climate-controlled fulfillment hub, an encrypted live-tracking SMS and email link is automatically dispatched to you. For 20-Minute Express eligible zones in central metro sectors, you can watch rider approach in real-time.",
+      status: "published",
+      viewsCount: 1420,
+      helpfulCount: 388,
+      tags: ["Tracking", "Courier", "Fulfillment"],
+      author: "Logistics Desk",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "faq_2",
+      title: "Authenticity Certificate & 100% Buyer Protection Guarantee",
+      category: "Troubleshooting",
+      summary: "Details about serial verification, tamper-evident seals, and manufacturer escrow protection.",
+      content: "Every timepiece, premium electronics unit, and designer leather accessory undergoes rigorous physical inspection by certified master appraisers before shipment. Items include a serialized digital certificate of authenticity backed by our 100% money-back escrow guarantee.",
+      status: "published",
+      viewsCount: 940,
+      helpfulCount: 260,
+      tags: ["Authenticity", "Warranty", "Escrow"],
+      author: "Quality Council",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "faq_3",
+      title: "Refund Timeline for Cards, bKash & Bank Transfers",
+      category: "Payments & Refunds",
+      summary: "Standard processing timeframes for mobile financial services, credit cards, and instant store wallet credit.",
+      content: "Approved refunds are released instantly to your ALIKE-ND Store Balance. For original payment reversal: bKash/Nagad transactions settle within 2 to 24 hours. Visa/Mastercard bank reversals depend on your issuing bank and take 3 to 7 business banking days.",
+      status: "published",
+      viewsCount: 1110,
+      helpfulCount: 305,
+      tags: ["Refund", "bKash", "Card"],
+      author: "Billing Support",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "faq_4",
+      title: "Platinum & VIP Concierge Services Overview",
+      category: "Account & Security",
+      summary: "Privileges of high-tier membership including dedicated private stylists, prioritized queues, and unlisted inventory access.",
+      content: "Members attaining Platinum tier unlock the 24/7 dedicated private hotline (+880 1800-254-539), private WhatsApp concierge line, zero delivery fees across all orders, and bespoke white-glove unboxing.",
+      status: "published",
+      viewsCount: 680,
+      helpfulCount: 195,
+      tags: ["VIP", "Platinum", "Concierge"],
+      author: "Executive Office",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: "faq_5",
+      title: "Hassle-Free 7-Day Return & Replacement Guidelines",
+      category: "Returns Policy",
+      summary: "How to lodge an immediate replacement request with free courier doorstep pickup.",
+      content: "If an item does not meet expectations or arrived defective, open a claim within 7 calendar days of receipt. Our concierge courier will collect the package directly from your home address at no charge.",
+      status: "published",
+      viewsCount: 1250,
+      helpfulCount: 410,
+      tags: ["Returns", "Replacement", "Doorstep Pickup"],
+      author: "Customer Rights",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ],
+  supportAgents: [
+    {
+      _id: "agt_1",
+      name: "Zara Ahmed",
+      email: "zara.care@alike-nd.com",
+      role: "Support Agent",
+      department: "Order Support",
+      status: "Active",
+      assignedTicketsCount: 8,
+      resolvedTicketsCount: 42,
+      avgCsat: 4.9,
+      phone: "+880 1700-112233",
+      createdAt: new Date(),
+    },
+    {
+      _id: "agt_2",
+      name: "Fahim Rahman",
+      email: "fahim.care@alike-nd.com",
+      role: "Support Agent",
+      department: "Order Support",
+      status: "Active",
+      assignedTicketsCount: 6,
+      resolvedTicketsCount: 38,
+      avgCsat: 4.8,
+      phone: "+880 1700-223344",
+      createdAt: new Date(),
+    },
+    {
+      _id: "agt_3",
+      name: "Imran Hossain",
+      email: "imran.manager@alike-nd.com",
+      role: "Support Manager",
+      department: "Technical & IT",
+      status: "Active",
+      assignedTicketsCount: 4,
+      resolvedTicketsCount: 65,
+      avgCsat: 5.0,
+      phone: "+880 1700-334455",
+      createdAt: new Date(),
+    },
+    {
+      _id: "agt_4",
+      name: "Sarah Jenkins",
+      email: "sarah.lead@alike-nd.com",
+      role: "Head of Care",
+      department: "Executive Concierge",
+      status: "Active",
+      assignedTicketsCount: 3,
+      resolvedTicketsCount: 90,
+      avgCsat: 5.0,
+      phone: "+880 1700-445566",
+      createdAt: new Date(),
+    },
+  ],
+  customerCareAuditLogs: [
+    {
+      _id: "cc_log_1",
+      action: "HOTLINE_VERIFIED",
+      targetId: "htl_1",
+      targetType: "hotline",
+      performedBy: "Super Admin",
+      details: "Master Executive Concierge hotline verified and activated on central portal.",
+      ip: "127.0.0.1",
+      createdAt: new Date(Date.now() - 3600000 * 24),
+    },
+    {
+      _id: "cc_log_2",
+      action: "TICKET_ESCALATED",
+      targetId: "TKT-2026-1044",
+      targetType: "ticket",
+      performedBy: "Zara Ahmed",
+      details: "Transit damage claim escalated to Support Manager Imran Hossain.",
+      ip: "127.0.0.1",
+      createdAt: new Date(Date.now() - 3600000 * 4),
+    },
+    {
+      _id: "cc_log_3",
+      action: "HOTLINE_CREATED",
+      targetId: "htl_5",
+      targetType: "hotline",
+      performedBy: "Super Admin",
+      details: "24/7 Security & Fraud Escalation line created and given priority routing.",
+      ip: "127.0.0.1",
+      createdAt: new Date(Date.now() - 3600000 * 48),
+    },
+  ],
+  customerCareSettings: {
+    autoResponderEnabled: true,
+    autoResponderMessage: "Thank you for reaching ALIKE-ND Customer Care. An authorized concierge representative will review your request within 15 minutes.",
+    workingHoursNotice: "Live phone hotlines are operational 24/7 for Executive & Emergency lines. Standard departments operate 08:00 AM to 11:00 PM.",
+    emergencyBannerText: "⚡ 24/7 Emergency Line is actively monitoring transit, payment security, and priority concierge requests.",
+    emergencyBannerActive: true,
+    whatsappChatEnabled: true,
+    emailNotificationsEnabled: true,
+    defaultSlaHours: 12,
+    updatedAt: new Date(),
+  },
 };
 
 let lastConnectionError: string | null = null;
@@ -1120,6 +1892,16 @@ export async function connectMongoDB(force = false): Promise<typeof mongoose | n
           await Banner.create(b);
         }
         console.log(`✨ [MONGODB SEED] Successfully seeded ${INITIAL_BANNERS_SEED.length} banners in alikendshop.banners`);
+      }
+
+      // 6. Seed Categories if empty in alikendshop.categories
+      const catCount = await Category.countDocuments();
+      if (catCount === 0) {
+        console.log("🏷️ [MONGODB SEED] Seeding initial category cards into alikendshop.categories...");
+        for (const c of INITIAL_CATEGORIES_SEED) {
+          await Category.create(c);
+        }
+        console.log(`✨ [MONGODB SEED] Successfully seeded ${INITIAL_CATEGORIES_SEED.length} categories in alikendshop.categories`);
       }
 
       // Seed Superadmin user in alikendshop.users

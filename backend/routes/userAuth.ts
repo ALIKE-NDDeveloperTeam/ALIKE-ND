@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
@@ -7,10 +8,13 @@ import Customer from "../models/Customer";
 import Seller from "../models/Seller";
 import OtpVerification from "../models/OtpVerification";
 import { sendOtpEmail } from "../services/mailer";
-import { isMongoConnected, memoryStore, getMongoDbInfo, connectMongoDB } from "../store";
+import { isMongoConnected, memoryStore, getMongoDbInfo, connectMongoDB, INITIAL_SUPERADMIN_EMAIL, INITIAL_STAFF_EMAIL } from "../store";
 import { logActivity } from "../utils/activityLogger";
 import { syncAdminPasswordToMemoryStore } from "./auth";
-import { JWT_SECRET, getJwtSecret, resolveAdminRole } from "../middleware/auth";
+import { resolveAdminRole, timingSafePasswordEqual } from "../middleware/auth";
+import { getJwtSecret } from "../config/jwt";
+import { firebaseAuth } from "../utils/firebaseAdmin";
+import { checkLoginRateLimit, recordFailedLoginAttempt, resetLoginAttempts } from "../utils/bruteForce";
 
 const router = Router();
 
@@ -73,8 +77,8 @@ router.post("/otp/send", async (req, res) => {
       return res.status(400).json({ error: "Please provide a valid email address format." });
     }
 
-    // Generate random 6-digit OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate cryptographically secure random 6-digit OTP
+    const otpCode = crypto.randomInt(100000, 1000000).toString();
     // Expiry: 10 minutes from now
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -145,18 +149,30 @@ router.post("/otp/verify", async (req, res) => {
 
     let isMatch = false;
 
-    // Check MongoDB
+    // Check MongoDB with attempt tracking
     if (isMongoConnected()) {
       try {
         const record = await OtpVerification.findOne({
           email: cleanEmail,
-          otp: cleanOtp,
           expiresAt: { $gt: now },
         });
+
         if (record) {
-          isMatch = true;
-          // Delete to prevent replay attacks
-          await OtpVerification.deleteOne({ _id: record._id });
+          const currentAttempts = (record.attempts || 0) + 1;
+          if (currentAttempts > 5) {
+            await OtpVerification.deleteOne({ _id: record._id });
+            return res.status(429).json({
+              success: false,
+              error: "Too many failed OTP verification attempts. This verification code has been invalidated for security. Please request a new one.",
+            });
+          }
+
+          if (record.otp === cleanOtp) {
+            isMatch = true;
+            await OtpVerification.deleteOne({ _id: record._id });
+          } else {
+            await OtpVerification.updateOne({ _id: record._id }, { $inc: { attempts: 1 } });
+          }
         }
       } catch (dbErr: any) {
         console.warn("MongoDB OTP verify warning:", dbErr.message);
@@ -165,15 +181,22 @@ router.post("/otp/verify", async (req, res) => {
 
     // Check memoryStore fallback if not matched yet
     if (!isMatch && memoryStore.otps) {
-      const idx = memoryStore.otps.findIndex(
-        (o) =>
-          o.email === cleanEmail &&
-          o.otp === cleanOtp &&
-          new Date(o.expiresAt) > now
+      const rec = memoryStore.otps.find(
+        (o) => o.email === cleanEmail && new Date(o.expiresAt) > now
       );
-      if (idx >= 0) {
-        isMatch = true;
-        memoryStore.otps.splice(idx, 1);
+      if (rec) {
+        (rec as any).attempts = ((rec as any).attempts || 0) + 1;
+        if ((rec as any).attempts > 5) {
+          memoryStore.otps = memoryStore.otps.filter((o) => o !== rec);
+          return res.status(429).json({
+            success: false,
+            error: "Too many failed OTP verification attempts. Code invalidated. Please request a new one.",
+          });
+        }
+        if (rec.otp === cleanOtp) {
+          isMatch = true;
+          memoryStore.otps = memoryStore.otps.filter((o) => o !== rec);
+        }
       }
     }
 
@@ -245,8 +268,8 @@ router.post("/forgot-password/send-otp", async (req, res) => {
       });
     }
 
-    // Generate random 6-digit OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate cryptographically secure random 6-digit OTP
+    const otpCode = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     if (isMongoConnected()) {
@@ -313,17 +336,31 @@ router.post("/forgot-password/verify-otp", async (req, res) => {
     let isMatch = false;
     let verifiedEmail = cleanId;
 
+    // Check MongoDB strictly matching email AND purpose
     if (isMongoConnected()) {
       try {
         const record = await OtpVerification.findOne({
-          $or: [{ email: cleanId }, { otp: cleanOtp }],
-          otp: cleanOtp,
+          email: cleanId,
           purpose: "forgot_password",
           expiresAt: { $gt: now },
         });
+
         if (record) {
-          isMatch = true;
-          verifiedEmail = record.email;
+          const currentAttempts = (record.attempts || 0) + 1;
+          if (currentAttempts > 5) {
+            await OtpVerification.deleteOne({ _id: record._id });
+            return res.status(429).json({
+              success: false,
+              error: "Too many failed reset code attempts. This code has been invalidated for security. Please request a new code.",
+            });
+          }
+
+          if (record.otp === cleanOtp) {
+            isMatch = true;
+            verifiedEmail = record.email;
+          } else {
+            await OtpVerification.updateOne({ _id: record._id }, { $inc: { attempts: 1 } });
+          }
         }
       } catch (e: any) {
         console.warn("Mongo verify forgot-password error:", e.message);
@@ -333,14 +370,23 @@ router.post("/forgot-password/verify-otp", async (req, res) => {
     if (!isMatch && memoryStore.otps) {
       const found = memoryStore.otps.find(
         (o) =>
-          (o.email === cleanId || o.otp === cleanOtp) &&
-          o.otp === cleanOtp &&
+          o.email === cleanId &&
           o.purpose === "forgot_password" &&
           new Date(o.expiresAt) > now
       );
       if (found) {
-        isMatch = true;
-        verifiedEmail = found.email;
+        (found as any).attempts = ((found as any).attempts || 0) + 1;
+        if ((found as any).attempts > 5) {
+          memoryStore.otps = memoryStore.otps.filter((o) => o !== found);
+          return res.status(429).json({
+            success: false,
+            error: "Too many failed reset code attempts. Code invalidated. Please request a new code.",
+          });
+        }
+        if (found.otp === cleanOtp) {
+          isMatch = true;
+          verifiedEmail = found.email;
+        }
       }
     }
 
@@ -379,14 +425,14 @@ router.post("/forgot-password/reset", async (req, res) => {
     const cleanOtp = String(otp).trim();
     const now = new Date();
 
-    // Verify OTP
+    // Verify OTP strictly for this email and purpose
     let isMatch = false;
     let verifiedEmail = cleanId;
 
     if (isMongoConnected()) {
       try {
         const record = await OtpVerification.findOne({
-          $or: [{ email: cleanId }, { otp: cleanOtp }],
+          email: cleanId,
           otp: cleanOtp,
           purpose: "forgot_password",
           expiresAt: { $gt: now },
@@ -404,7 +450,7 @@ router.post("/forgot-password/reset", async (req, res) => {
     if (!isMatch && memoryStore.otps) {
       const idx = memoryStore.otps.findIndex(
         (o) =>
-          (o.email === cleanId || o.otp === cleanOtp) &&
+          o.email === cleanId &&
           o.otp === cleanOtp &&
           o.purpose === "forgot_password" &&
           new Date(o.expiresAt) > now
@@ -605,7 +651,7 @@ router.post("/register", async (req, res) => {
           req
         );
 
-        const token = jwt.sign({ userId: newUser._id, email: newUser.email }, JWT_SECRET, { expiresIn: "30d" });
+        const token = jwt.sign({ userId: newUser._id, email: newUser.email }, secret, { expiresIn: "30d" });
 
         return res.status(201).json({
           success: true,
@@ -692,7 +738,7 @@ router.post("/register", async (req, res) => {
       req
     );
 
-    const token = jwt.sign({ userId: newMemUser._id, email: newMemUser.email }, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ userId: newMemUser._id, email: newMemUser.email }, secret, { expiresIn: "30d" });
 
     return res.status(201).json({
       success: true,
@@ -736,20 +782,56 @@ router.post("/login", async (req, res) => {
     }
 
     const cleanId = String(identifier).toLowerCase().trim();
+    const targetSuperAdminEmail = (process.env.SUPERADMIN_EMAIL || INITIAL_SUPERADMIN_EMAIL || "developer.alikend@gmail.com").trim().toLowerCase();
+
+    // Check brute-force rate limit (5 attempts within 15 minutes per IP / identifier)
+    const rateLimit = await checkLoginRateLimit(req, cleanId);
+    if (!rateLimit.allowed) {
+      if (rateLimit.status === 503) {
+        return res.status(503).json({ success: false, error: rateLimit.error });
+      }
+      res.setHeader("Retry-After", String(rateLimit.retryAfter || 900));
+      return res.status(429).json({ success: false, error: "Too many attempts, try again later" });
+    }
+
+    const rawTrimmed = String(identifier).trim();
+    const digitsOnly = rawTrimmed.replace(/\D/g, "");
+    const isPotentialPhone = !rawTrimmed.includes("@") && digitsOnly.length >= 6;
+    const phoneCandidates: string[] = isPotentialPhone
+      ? Array.from(new Set([
+          rawTrimmed,
+          digitsOnly,
+          digitsOnly.startsWith("0") ? digitsOnly.slice(1) : digitsOnly,
+          digitsOnly.startsWith("880") ? digitsOnly.slice(3) : digitsOnly,
+          digitsOnly.startsWith("8800") ? digitsOnly.slice(4) : digitsOnly,
+          digitsOnly.length === 10 ? `0${digitsOnly}` : "",
+          digitsOnly.length === 10 ? `+880 ${digitsOnly}` : "",
+          digitsOnly.length === 10 ? `+880${digitsOnly}` : "",
+        ])).filter((p) => p && p.length >= 6)
+      : [];
 
     // 1. Query MongoDB alikendshop.users collection first if connected
     let user: any = null;
     let isFromMongo = false;
 
+    if (!isMongoConnected()) {
+      try {
+        await connectMongoDB();
+      } catch {}
+    }
+
     if (isMongoConnected()) {
       try {
-        user = await User.findOne({
-          $or: [
-            { email: cleanId },
-            { mobileNumber: identifier },
-            { phone: identifier },
-          ],
-        });
+        const orConditions: any[] = [
+          { email: cleanId },
+          { username: cleanId },
+        ];
+        // Exact equality matching only for normalized phone candidates (no regex, no partial/suffix matching)
+        for (const candidate of phoneCandidates) {
+          orConditions.push({ mobileNumber: candidate });
+          orConditions.push({ phone: candidate });
+        }
+        user = await User.findOne({ $or: orConditions });
         if (user) isFromMongo = true;
       } catch (dbErr: any) {
         console.warn("MongoDB user lookup warning:", dbErr?.message);
@@ -757,38 +839,96 @@ router.post("/login", async (req, res) => {
     }
 
     // 2. Fallback to memoryStore.users if not found in MongoDB or MongoDB is offline
+    // Matches ONLY by exact equality (no regex, no partial/suffix matching)
     if (!user) {
       user = (memoryStore.users || []).find(
         (u) =>
           u.email?.toLowerCase() === cleanId ||
-          u.mobileNumber === identifier ||
-          u.phone === identifier
+          u.username?.toLowerCase() === cleanId ||
+          phoneCandidates.some((candidate) => u.mobileNumber === candidate || u.phone === candidate)
       );
     }
 
-    // 3. Fallback: If this is an administrator (e.g. developer.alikend@gmail.com) logging in via customer modal
+    // 3. Fallback: If this is an administrator logging in via customer modal
     let matchedAdminDoc: any = null;
-    if (!user) {
-      if (isMongoConnected()) {
-        try {
-          matchedAdminDoc = await Admin.findOne({ email: cleanId });
-        } catch {}
-      }
-      if (!matchedAdminDoc) {
-        matchedAdminDoc = (memoryStore.admins || []).find((a) => a.email?.toLowerCase() === cleanId);
-      }
+    if (isMongoConnected()) {
+      try {
+        matchedAdminDoc = await Admin.findOne({ email: cleanId });
+      } catch {}
+    }
+    const isSuperAdminAccount = cleanId === targetSuperAdminEmail;
 
-      if (matchedAdminDoc && matchedAdminDoc.isActive !== false) {
-        const hasAdminHash = Boolean(matchedAdminDoc.passwordHash && String(matchedAdminDoc.passwordHash).trim() !== "");
+    if (!matchedAdminDoc && isSuperAdminAccount) {
+      matchedAdminDoc = (memoryStore.admins || []).find(
+        (a) => a.email?.toLowerCase() === cleanId
+      ) || {
+        _id: "admin_super_init",
+        email: targetSuperAdminEmail,
+        name: "Super Admin",
+        role: "superadmin",
+        isActive: true,
+      };
+    } else if (!matchedAdminDoc) {
+      matchedAdminDoc = (memoryStore.admins || []).find(
+        (a) => a.email?.toLowerCase() === cleanId
+      );
+    }
+
+    // If this user is an admin and has an updated passwordHash in admin collection, keep user record updated
+    if (matchedAdminDoc && user && matchedAdminDoc.passwordHash) {
+      user.passwordHash = matchedAdminDoc.passwordHash;
+    }
+
+    if (!user && matchedAdminDoc && matchedAdminDoc.isActive !== false) {
         let isPassMatch = false;
-        if (hasAdminHash) {
-          try {
-            isPassMatch = await bcrypt.compare(password, matchedAdminDoc.passwordHash);
-          } catch {
+
+        if (isSuperAdminAccount) {
+          // The INITIAL_ADMIN_PASSWORD env variable is the source of truth for the superadmin account
+          const rawEnvPassword = process.env.INITIAL_ADMIN_PASSWORD;
+          const expectedPassword = rawEnvPassword ? rawEnvPassword.trim() : "";
+          const trimmedSubmittedPassword = password ? String(password).trim() : "";
+
+          const expectedByteLen = Buffer.byteLength(expectedPassword, "utf-8");
+          const submittedByteLen = Buffer.byteLength(password, "utf-8");
+          const trimmedByteLen = Buffer.byteLength(trimmedSubmittedPassword, "utf-8");
+
+          // Guard: Check that buffers have equal length first (Buffer.byteLength comparison)
+          // and return 401 immediately if lengths differ, instead of letting timingSafeEqual throw
+          if (expectedByteLen === 0 || (submittedByteLen !== expectedByteLen && trimmedByteLen !== expectedByteLen)) {
+            await recordFailedLoginAttempt(req, cleanId);
+            return res.status(401).json({
+              success: false,
+              error: "Invalid credentials",
+            });
+          }
+
+          if (
+            expectedPassword &&
+            (timingSafePasswordEqual(password, expectedPassword) || timingSafePasswordEqual(trimmedSubmittedPassword, expectedPassword))
+          ) {
+            isPassMatch = true;
+            try {
+              const freshHash = await bcrypt.hash(expectedPassword, 10);
+              matchedAdminDoc.passwordHash = freshHash;
+              syncAdminPasswordToMemoryStore(cleanId, freshHash, { role: "superadmin", isActive: true });
+              if (isMongoConnected() && matchedAdminDoc.save) {
+                await matchedAdminDoc.save().catch(() => null);
+              }
+            } catch {}
+          } else {
+            // If the submitted password does not match the env value, reject with 401 "Invalid credentials"
             isPassMatch = false;
           }
         } else {
-          isPassMatch = true;
+          // Staff admins keep using their own stored hashes
+          const hasAdminHash = Boolean(matchedAdminDoc.passwordHash && String(matchedAdminDoc.passwordHash).trim() !== "");
+          if (hasAdminHash) {
+            try {
+              isPassMatch = await bcrypt.compare(password, matchedAdminDoc.passwordHash);
+            } catch {
+              isPassMatch = false;
+            }
+          }
         }
 
         if (isPassMatch) {
@@ -820,36 +960,37 @@ router.post("/login", async (req, res) => {
             });
           }
         } else {
+          await recordFailedLoginAttempt(req, cleanId);
           return res.status(401).json({
             success: false,
-            error: "Incorrect password. Please verify your credentials and try again.",
+            error: "Invalid credentials",
           });
         }
       }
-    }
 
-    // 4. If no matching user document found anywhere, fail
+    // 4. If no matching user document found anywhere, fail with generic 401
     if (!user) {
-      console.warn(`⚠️ [LOGIN REJECTED] No user or admin document found for identifier: ${cleanId}`);
+      await recordFailedLoginAttempt(req, cleanId);
       await logActivity(
         {
           eventType: "Failed Login",
           status: "failed",
           userName: "Unregistered User",
           email: cleanId,
-          details: "Login failed: No account found",
+          details: "Login failed: Invalid credentials",
         },
         req
       );
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        error: "No account found, please register first.",
+        error: "Invalid credentials",
       });
     }
 
     // 5. Check if user account is blocked by admin
     if (user.isBlocked) {
-      console.warn(`⛔ [LOGIN BLOCKED] Blocked account attempted login: ${cleanId}`);
+      await recordFailedLoginAttempt(req, cleanId);
+      console.info(`[LOGIN] Blocked account attempted login: ${cleanId}`);
       await logActivity(
         {
           eventType: "Failed Login",
@@ -868,27 +1009,94 @@ router.post("/login", async (req, res) => {
 
     // 6. Check password if not already validated via admin path
     if (!matchedAdminDoc) {
+      const userEmailClean = user.email?.toLowerCase().trim();
+      const isSuperAdminUser = cleanId === targetSuperAdminEmail || userEmailClean === targetSuperAdminEmail;
+
       const hasStoredHash = Boolean(user.passwordHash && String(user.passwordHash).trim() !== "");
-      if (hasStoredHash) {
-        const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-        if (!isPasswordValid) {
-          console.warn(`⚠️ [LOGIN REJECTED] Incorrect password for user: ${cleanId}`);
+      let isPasswordValid = false;
+
+      if (isSuperAdminUser) {
+        // The INITIAL_ADMIN_PASSWORD env variable is the source of truth for the superadmin account
+        const rawEnvPassword = process.env.INITIAL_ADMIN_PASSWORD;
+        const expectedPassword = rawEnvPassword ? rawEnvPassword.trim() : "";
+        const trimmedSubmittedPassword = password ? String(password).trim() : "";
+
+        const expectedByteLen = Buffer.byteLength(expectedPassword, "utf-8");
+        const submittedByteLen = Buffer.byteLength(password, "utf-8");
+        const trimmedByteLen = Buffer.byteLength(trimmedSubmittedPassword, "utf-8");
+
+        // Guard: Check that buffers have equal length first (Buffer.byteLength comparison)
+        // and return 401 immediately if lengths differ, instead of letting timingSafeEqual throw
+        if (expectedByteLen === 0 || (submittedByteLen !== expectedByteLen && trimmedByteLen !== expectedByteLen)) {
+          await recordFailedLoginAttempt(req, cleanId);
           await logActivity(
             {
               eventType: "Failed Login",
               status: "failed",
               userName: user.fullName,
               email: user.email,
-              details: "Login failed: Incorrect password provided",
+              details: "Login failed: Invalid credentials",
             },
             req
           );
           return res.status(401).json({
             success: false,
-            error: "Incorrect password. Please verify your credentials and try again.",
+            error: "Invalid credentials",
           });
         }
+
+        if (
+          expectedPassword &&
+          (timingSafePasswordEqual(password, expectedPassword) || timingSafePasswordEqual(trimmedSubmittedPassword, expectedPassword))
+        ) {
+          isPasswordValid = true;
+          try {
+            const freshHash = await bcrypt.hash(expectedPassword, 10);
+            user.passwordHash = freshHash;
+            if (isFromMongo && typeof user.save === "function") {
+              await user.save().catch(() => null);
+            }
+            if (isMongoConnected()) {
+              await Admin.updateOne(
+                { email: targetSuperAdminEmail },
+                { $set: { passwordHash: freshHash, role: "superadmin", isActive: true } },
+                { upsert: true }
+              ).catch(() => null);
+            }
+            syncAdminPasswordToMemoryStore(targetSuperAdminEmail, freshHash, { role: "superadmin", isActive: true });
+          } catch {}
+        } else {
+          // If the submitted password does not match the env value, reject with 401 "Invalid credentials"
+          isPasswordValid = false;
+        }
       } else {
+        // Staff admins and customers keep using their own stored hashes
+        if (hasStoredHash) {
+          try {
+            isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+          } catch {
+            isPasswordValid = false;
+          }
+        }
+      }
+
+      if (!isPasswordValid) {
+        await recordFailedLoginAttempt(req, cleanId);
+        await logActivity(
+          {
+            eventType: "Failed Login",
+            status: "failed",
+            userName: user.fullName,
+            email: user.email,
+            details: "Login failed: Invalid credentials",
+          },
+          req
+        );
+        return res.status(401).json({
+          success: false,
+          error: "Invalid credentials",
+        });
+      } else if (!hasStoredHash) {
         try {
           const newHash = await bcrypt.hash(password, 10);
           user.passwordHash = newHash;
@@ -901,6 +1109,9 @@ router.post("/login", async (req, res) => {
 
     // User authenticated successfully
     console.log(`✅ [LOGIN SUCCESS] User authenticated: ${user.email} (ID: ${user._id})`);
+    
+    // Reset brute-force counter for this identifier
+    await resetLoginAttempts(cleanId, user.email, user.phone, user.mobileNumber);
     
     await logActivity(
       {
@@ -918,26 +1129,35 @@ router.post("/login", async (req, res) => {
     // Check if this user is also registered as an Administrator
     let adminToken: string | null = null;
     let isAdmin = false;
-    let adminRole = "superadmin";
+    let adminRole: "superadmin" | "admin" | null = null;
 
     try {
       let adminDoc = matchedAdminDoc;
       if (!adminDoc && isMongoConnected()) {
         adminDoc = await Admin.findOne({ email: user.email.toLowerCase().trim() });
       }
-      if (!adminDoc) {
+      if (!adminDoc && user.email.toLowerCase().trim() === targetSuperAdminEmail) {
+        adminDoc = (memoryStore.admins || []).find((a) => a.email.toLowerCase() === targetSuperAdminEmail) || {
+          _id: user._id || "admin_super_init",
+          email: targetSuperAdminEmail,
+          name: user.fullName || "Super Admin",
+          role: "superadmin",
+          isActive: true,
+        };
+      } else if (!adminDoc && process.env.NODE_ENV !== "production") {
         adminDoc = (memoryStore.admins || []).find((a) => a.email.toLowerCase() === user.email.toLowerCase().trim());
       }
 
-      if (adminDoc && adminDoc.isActive !== false) {
+      // Mint admin token ONLY if stored role is explicitly "superadmin" or "admin"
+      if (adminDoc && adminDoc.isActive !== false && (adminDoc.role === "superadmin" || adminDoc.role === "admin")) {
         isAdmin = true;
-        adminRole = resolveAdminRole(adminDoc);
+        adminRole = adminDoc.role === "superadmin" ? "superadmin" : "admin";
         adminToken = jwt.sign(
           { adminId: String(adminDoc._id), email: adminDoc.email, name: adminDoc.name, role: adminRole },
           secret,
           { expiresIn: "7d" }
         );
-        console.log(`👑 [ADMIN PRIVILEGE DETECTED] Auto-minted admin token on login for: ${user.email}`);
+        console.log(`👑 [ADMIN PRIVILEGE DETECTED] Auto-minted admin token on login for: ${user.email} [Role: ${adminRole}]`);
       }
     } catch (e) {
       console.warn("Admin check warning:", e);
@@ -977,8 +1197,8 @@ router.post("/login", async (req, res) => {
       },
       token,
       isAdmin,
-      adminRole,
-      adminToken,
+      adminRole: isAdmin ? adminRole : null,
+      adminToken: isAdmin ? adminToken : null,
       isSeller,
       sellerStatus,
       sellerShopName,
@@ -1000,25 +1220,44 @@ router.post("/google", async (req, res) => {
       });
     }
 
-    const { email, googleId, name, autoRegister } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, error: "Email is required for Google authentication" });
+    const { idToken, autoRegister = true } = req.body;
+    if (!idToken || typeof idToken !== "string") {
+      return res.status(401).json({
+        success: false,
+        error: "Google authentication token (idToken) is required.",
+      });
     }
 
-    const cleanEmail = String(email).toLowerCase().trim();
-    const cleanName = String(name || cleanEmail.split("@")[0] || "Google Member").trim();
+    // Verify Google ID token cryptographically using Firebase Admin SDK
+    let decoded: any;
+    try {
+      decoded = await firebaseAuth.verifyIdToken(idToken);
+    } catch (verifyErr: any) {
+      console.warn("Firebase verifyIdToken failed:", verifyErr?.message || verifyErr);
+      return res.status(401).json({
+        success: false,
+        error: "Invalid or expired Google authentication token. Please sign in again.",
+      });
+    }
 
-    console.log(`🔍 [GOOGLE AUTH] Verifying user account for: ${cleanEmail} (googleId: ${googleId || "none"})`);
+    if (!decoded || !decoded.email || decoded.email_verified !== true) {
+      return res.status(401).json({
+        success: false,
+        error: "Google account email is not verified or unavailable.",
+      });
+    }
+
+    const cleanEmail = String(decoded.email).toLowerCase().trim();
+    const cleanName = String(decoded.name || cleanEmail.split("@")[0] || "Google Member").trim();
+
+    console.log(`🔍 [GOOGLE AUTH] Verified token for: ${cleanEmail}`);
 
     let existingUser: any = null;
 
     if (isMongoConnected()) {
       try {
         existingUser = await User.findOne({
-          $or: [
-            { email: cleanEmail },
-            { email: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
-          ],
+          email: cleanEmail,
         });
       } catch (dbErr: any) {
         console.warn("MongoDB Google lookup error:", dbErr?.message);
@@ -1042,31 +1281,18 @@ router.post("/google", async (req, res) => {
 
       const token = jwt.sign(
         { userId: String(existingUser._id), email: existingUser.email, role: "customer" },
-        JWT_SECRET,
-        { expiresIn: "30d" }
+        secret,
+        { expiresIn: "7d" }
       );
 
-      // Check admin status
-      let adminToken: string | null = null;
-      try {
-        const adminDoc = await Admin.findOne({ email: cleanEmail });
-        if (adminDoc && adminDoc.isActive !== false) {
-          const adminRole = resolveAdminRole(adminDoc.role, cleanEmail);
-          adminToken = jwt.sign(
-            { adminId: String(adminDoc._id), email: adminDoc.email, name: adminDoc.name, role: adminRole },
-            JWT_SECRET,
-            { expiresIn: "7d" }
-          );
-        }
-      } catch (_e) {}
-
+      // Security directive: Never issue admin token from Google login route
       await logActivity(
         {
           eventType: "Login",
           status: "success",
           userName: existingUser.fullName || cleanName,
           email: existingUser.email,
-          details: "Google authentication verified in alikendshop.users",
+          details: "Google authentication verified via Firebase ID Token",
         },
         req
       );
@@ -1076,7 +1302,6 @@ router.post("/google", async (req, res) => {
         isExisting: true,
         isNew: false,
         token,
-        adminToken,
         user: {
           _id: String(existingUser._id),
           name: existingUser.fullName || cleanName,
@@ -1091,7 +1316,7 @@ router.post("/google", async (req, res) => {
     // 2. User does not exist in database
     if (autoRegister) {
       // Auto-register new Google user in database
-      const randomPassword = `G_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const randomPassword = `G_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
       const passwordHash = await bcrypt.hash(randomPassword, 10);
       let newUser: any = null;
 
@@ -1134,8 +1359,8 @@ router.post("/google", async (req, res) => {
 
       const token = jwt.sign(
         { userId: String(newUser._id), email: newUser.email, role: "customer" },
-        JWT_SECRET,
-        { expiresIn: "30d" }
+        secret,
+        { expiresIn: "7d" }
       );
 
       await logActivity(
@@ -1144,7 +1369,7 @@ router.post("/google", async (req, res) => {
           status: "success",
           userName: newUser.fullName,
           email: newUser.email,
-          details: "New user registered via Google OAuth in alikendshop.users",
+          details: "New user registered via Google OAuth (Firebase ID Token verified)",
         },
         req
       );
@@ -1175,6 +1400,236 @@ router.post("/google", async (req, res) => {
   } catch (err: any) {
     console.error("💥 [GOOGLE AUTH ERROR]:", err);
     res.status(500).json({ success: false, error: err.message || "Google authentication failed" });
+  }
+});
+
+// POST /api/auth/apple - Authenticate or register Apple account directly into MongoDB alikendshop.users
+router.post("/apple", async (req, res) => {
+  try {
+    const secret = getJwtSecret();
+    if (!secret) {
+      return res.status(503).json({
+        success: false,
+        error: "Authentication service is temporarily misconfigured. Please contact support.",
+      });
+    }
+
+    const { idToken, appleUser, email, fullName, autoRegister = true } = req.body;
+
+    let cleanEmail = "";
+    let cleanName = "";
+
+    // 1. If an ID Token is provided, try verifying it via Firebase Admin
+    if (idToken && typeof idToken === "string") {
+      try {
+        const decoded = await firebaseAuth.verifyIdToken(idToken);
+        if (decoded && decoded.email) {
+          cleanEmail = String(decoded.email).toLowerCase().trim();
+        }
+        if (decoded && decoded.name) {
+          cleanName = String(decoded.name).trim();
+        }
+      } catch (verifyErr: any) {
+        console.warn("🍎 [APPLE AUTH] Token verify fallback to client payload:", verifyErr?.message || verifyErr);
+      }
+    }
+
+    // 2. Fallback to client-provided payload if token didn't yield an email
+    if (!cleanEmail) {
+      if (typeof email === "string" && email.includes("@")) {
+        cleanEmail = email.toLowerCase().trim();
+      } else if (appleUser && typeof appleUser.email === "string" && appleUser.email.includes("@")) {
+        cleanEmail = appleUser.email.toLowerCase().trim();
+      }
+    }
+
+    if (!cleanName) {
+      if (typeof fullName === "string" && fullName.trim()) {
+        cleanName = fullName.trim();
+      } else if (appleUser && typeof appleUser.name === "string" && appleUser.name.trim()) {
+        cleanName = appleUser.name.trim();
+      } else if (cleanEmail) {
+        cleanName = cleanEmail.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Apple Member";
+      } else {
+        cleanName = "Apple Member";
+      }
+    }
+
+    if (!cleanEmail) {
+      return res.status(400).json({
+        success: false,
+        error: "Valid Apple ID email address is required.",
+      });
+    }
+
+    console.log(`🍎 [APPLE AUTH] Processing Apple authentication for: ${cleanEmail} (${cleanName})`);
+
+    let existingUser: any = null;
+
+    if (isMongoConnected()) {
+      try {
+        existingUser = await User.findOne({
+          email: cleanEmail,
+        });
+      } catch (dbErr: any) {
+        console.warn("MongoDB Apple lookup error:", dbErr?.message);
+      }
+    }
+
+    if (!existingUser) {
+      existingUser = (memoryStore.users || []).find(
+        (u) => u.email.toLowerCase().trim() === cleanEmail
+      );
+    }
+
+    // A. Existing user login
+    if (existingUser) {
+      if (existingUser.isBlocked) {
+        return res.status(403).json({
+          success: false,
+          error: "Your account has been suspended or blocked by an administrator. Please contact support.",
+        });
+      }
+
+      const token = jwt.sign(
+        { userId: String(existingUser._id), email: existingUser.email, role: "customer" },
+        secret,
+        { expiresIn: "7d" }
+      );
+
+      await logActivity(
+        {
+          eventType: "Login",
+          status: "success",
+          userName: existingUser.fullName || cleanName,
+          email: existingUser.email,
+          details: "Apple authentication verified and logged into MongoDB alikendshop.users",
+        },
+        req
+      );
+
+      return res.json({
+        success: true,
+        isExisting: true,
+        isNew: false,
+        token,
+        user: {
+          _id: String(existingUser._id),
+          name: existingUser.fullName || cleanName,
+          email: existingUser.email,
+          phone: existingUser.phone || existingUser.mobileNumber || "",
+          tier: existingUser.tier || "Silver",
+          country: existingUser.country || "Bangladesh",
+        },
+        database: "alikendshop",
+        collection: "users",
+      });
+    }
+
+    // B. New user registration in MongoDB
+    if (autoRegister) {
+      const randomPassword = `A_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+      let newUser: any = null;
+
+      if (isMongoConnected()) {
+        try {
+          const userDoc = new User({
+            fullName: cleanName,
+            email: cleanEmail,
+            country: "Bangladesh",
+            mobileNumber: "",
+            phone: "",
+            passwordHash,
+            tier: "Silver",
+            verified: true,
+            isBlocked: false,
+          });
+          await userDoc.save();
+          newUser = userDoc;
+          console.log(`✅ [APPLE AUTH] Saved new Apple user to MongoDB: ${cleanEmail}`);
+
+          // Also sync to Customer collection for analytics and admin panels
+          try {
+            const existingCustomer = await Customer.findOne({ email: cleanEmail });
+            if (!existingCustomer) {
+              await Customer.create({
+                name: cleanName,
+                email: cleanEmail,
+                tier: "Silver",
+                ordersCount: 0,
+                lifetimeSpend: 0,
+              });
+            }
+          } catch (custErr: any) {
+            console.warn("Customer sync for Apple user notice:", custErr?.message);
+          }
+        } catch (saveErr: any) {
+          console.warn("MongoDB Apple user save error:", saveErr?.message);
+        }
+      }
+
+      if (!newUser) {
+        newUser = {
+          _id: `user_apple_${Date.now()}`,
+          fullName: cleanName,
+          email: cleanEmail,
+          country: "Bangladesh",
+          mobileNumber: "",
+          phone: "",
+          passwordHash,
+          tier: "Silver",
+          verified: true,
+          isBlocked: false,
+          createdAt: new Date(),
+        };
+        memoryStore.users.push(newUser);
+      }
+
+      const token = jwt.sign(
+        { userId: String(newUser._id), email: newUser.email, role: "customer" },
+        secret,
+        { expiresIn: "7d" }
+      );
+
+      await logActivity(
+        {
+          eventType: "Registration",
+          status: "success",
+          userName: newUser.fullName,
+          email: newUser.email,
+          details: "New user registered via Apple ID directly into MongoDB alikendshop.users",
+        },
+        req
+      );
+
+      return res.json({
+        success: true,
+        isExisting: false,
+        isNew: true,
+        token,
+        user: {
+          _id: String(newUser._id),
+          name: newUser.fullName,
+          email: newUser.email,
+          phone: "",
+          tier: "Silver",
+          country: "Bangladesh",
+        },
+        database: "alikendshop",
+        collection: "users",
+      });
+    }
+
+    return res.json({
+      success: true,
+      isExisting: false,
+      isNew: true,
+      message: "No account found in alikendshop.users. Registration required.",
+    });
+  } catch (err: any) {
+    console.error("💥 [APPLE AUTH ERROR]:", err);
+    res.status(500).json({ success: false, error: err.message || "Apple authentication failed" });
   }
 });
 
@@ -1249,12 +1704,12 @@ router.get("/me", async (req, res) => {
       if (isMongoConnected()) {
         adminDoc = await Admin.findOne({ email: user.email.toLowerCase().trim() });
       }
-      if (!adminDoc) {
+      if (!adminDoc && process.env.NODE_ENV !== "production") {
         adminDoc = (memoryStore.admins || []).find((a) => a.email.toLowerCase() === user.email.toLowerCase().trim());
       }
-      if (adminDoc && adminDoc.isActive !== false) {
+      if (adminDoc && adminDoc.isActive !== false && (adminDoc.role === "superadmin" || adminDoc.role === "admin")) {
         isAdmin = true;
-        adminRole = resolveAdminRole(adminDoc);
+        adminRole = adminDoc.role === "superadmin" ? "superadmin" : "admin";
         adminToken = jwt.sign(
           { adminId: String(adminDoc._id), email: adminDoc.email, name: adminDoc.name, role: adminRole },
           secret,
@@ -1300,6 +1755,81 @@ router.get("/me", async (req, res) => {
     });
   } catch (err: any) {
     return res.status(500).json({ valid: false, error: err.message });
+  }
+});
+
+// POST /api/auth/change-password - Change password for logged in customer/user
+router.post("/change-password", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    let userEmail: string | undefined;
+
+    const secret = getJwtSecret();
+    if (authHeader && authHeader.startsWith("Bearer ") && secret) {
+      try {
+        const decoded = jwt.verify(authHeader.split(" ")[1], secret) as any;
+        userEmail = decoded.email;
+      } catch (e) {}
+    }
+
+    const { email, currentPassword, newPassword } = req.body;
+    const targetEmail = (userEmail || email || "").toLowerCase().trim();
+
+    if (!targetEmail) {
+      return res.status(401).json({ success: false, error: "Authentication required to change password" });
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: "Both current password and new password are required" });
+    }
+
+    if (typeof newPassword !== "string" || newPassword.trim().length < 6) {
+      return res.status(400).json({ success: false, error: "New password must be at least 6 characters long" });
+    }
+
+    let userDoc: any = null;
+    if (isMongoConnected()) {
+      try {
+        userDoc = await User.findOne({ email: targetEmail });
+      } catch (err: any) {
+        console.warn("Mongo find user error:", err?.message);
+      }
+    }
+    if (!userDoc) {
+      userDoc = (memoryStore.users || []).find((u) => u.email?.toLowerCase() === targetEmail);
+    }
+
+    if (!userDoc) {
+      return res.status(404).json({ success: false, error: "User account not found" });
+    }
+
+    let isCurrentValid = false;
+    if (userDoc.passwordHash) {
+      isCurrentValid = await bcrypt.compare(currentPassword, userDoc.passwordHash);
+    }
+
+    if (!isCurrentValid) {
+      return res.status(400).json({ success: false, error: "Incorrect current password" });
+    }
+
+    const newHash = await bcrypt.hash(newPassword.trim(), 10);
+
+    if (isMongoConnected()) {
+      try {
+        await User.updateOne({ email: targetEmail }, { $set: { passwordHash: newHash, updatedAt: new Date() } });
+      } catch (err: any) {
+        console.warn("Mongo update user password error:", err?.message);
+      }
+    }
+
+    const memIdx = (memoryStore.users || []).findIndex((u) => u.email?.toLowerCase() === targetEmail);
+    if (memIdx !== -1) {
+      memoryStore.users[memIdx].passwordHash = newHash;
+    }
+
+    return res.json({ success: true, message: "Password updated successfully!" });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || "Failed to update password" });
   }
 });
 

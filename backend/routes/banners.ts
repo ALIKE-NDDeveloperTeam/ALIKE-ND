@@ -9,19 +9,32 @@ router.use(requireAdmin);
 // GET /api/admin/banners - Fetch all banners (active + inactive) sorted by order
 router.get("/", async (_req, res) => {
   try {
+    let list: any[] = [];
     if (isMongoConnected()) {
       try {
         const banners = await Banner.find().sort({ order: 1, createdAt: 1 });
         if (banners && banners.length > 0) {
-          return res.json(banners.map((b) => (b.toObject ? b.toObject() : b)));
+          list = banners.map((b) => (b.toObject ? b.toObject() : b));
         }
       } catch (err) {
         console.warn("MongoDB fetch banners error, falling back to memory:", err);
       }
     }
 
-    const sortedMem = [...(memoryStore.banners || [])].sort((a, b) => a.order - b.order);
-    return res.json(sortedMem);
+    if (!list || list.length === 0) {
+      list = [...(memoryStore.banners || [])].sort((a, b) => a.order - b.order);
+    }
+
+    const sanitized = list.map((b: any) => ({
+      ...b,
+      linkUrl: b.linkUrl || b.link || "",
+      link: b.link || b.linkUrl || "",
+      isActive: b.active !== false && b.isActive !== false,
+      active: b.active !== false && b.isActive !== false,
+      isCenterFeatured: Boolean(b.isCenterFeatured),
+    }));
+
+    return res.json(sanitized);
   } catch (err: any) {
     return res.status(500).json({ error: err.message || "Failed to fetch banners" });
   }
@@ -37,13 +50,20 @@ router.post("/", async (req, res) => {
       description = "",
       buttonText = "",
       link = "",
+      linkUrl = "",
       order,
-      active = true,
+      active,
+      isActive,
+      isCenterFeatured = false,
     } = req.body;
 
     if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.trim()) {
       return res.status(400).json({ error: "Image URL is required" });
     }
+
+    const finalLink = (linkUrl || link || "").trim();
+    const finalActive = active !== undefined ? Boolean(active) : isActive !== undefined ? Boolean(isActive) : true;
+    const finalCenter = Boolean(isCenterFeatured);
 
     let calculatedOrder = Number(order);
     if (isNaN(calculatedOrder)) {
@@ -68,9 +88,11 @@ router.post("/", async (req, res) => {
           subtitle: subtitle.trim(),
           description: description.trim(),
           buttonText: buttonText.trim(),
-          link: link.trim(),
+          link: finalLink,
+          linkUrl: finalLink,
           order: calculatedOrder,
-          active: Boolean(active),
+          active: finalActive,
+          isCenterFeatured: finalCenter,
         });
       } catch (dbErr) {
         console.warn("MongoDB create banner fallback to memory:", dbErr);
@@ -84,9 +106,12 @@ router.post("/", async (req, res) => {
       subtitle: subtitle.trim(),
       description: description.trim(),
       buttonText: buttonText.trim(),
-      link: link.trim(),
+      link: finalLink,
+      linkUrl: finalLink,
       order: calculatedOrder,
-      active: Boolean(active),
+      active: finalActive,
+      isActive: finalActive,
+      isCenterFeatured: finalCenter,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -94,7 +119,14 @@ router.post("/", async (req, res) => {
     if (!memoryStore.banners) memoryStore.banners = [];
     memoryStore.banners.push(newBanner);
 
-    return res.status(201).json(createdDoc ? createdDoc.toObject() : newBanner);
+    const docObj = createdDoc && typeof createdDoc.toObject === "function" ? createdDoc.toObject() : newBanner;
+    return res.status(201).json({
+      ...docObj,
+      linkUrl: docObj.linkUrl || docObj.link || "",
+      link: docObj.link || docObj.linkUrl || "",
+      isActive: docObj.active !== false,
+      isCenterFeatured: Boolean(docObj.isCenterFeatured),
+    });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || "Failed to create banner" });
   }
@@ -176,8 +208,11 @@ router.put("/:id", async (req, res) => {
       description,
       buttonText,
       link,
+      linkUrl,
       order,
       active,
+      isActive,
+      isCenterFeatured,
     } = req.body;
 
     const updateData: any = {};
@@ -186,15 +221,35 @@ router.put("/:id", async (req, res) => {
     if (subtitle !== undefined) updateData.subtitle = String(subtitle).trim();
     if (description !== undefined) updateData.description = String(description).trim();
     if (buttonText !== undefined) updateData.buttonText = String(buttonText).trim();
-    if (link !== undefined) updateData.link = String(link).trim();
+    if (linkUrl !== undefined) {
+      updateData.linkUrl = String(linkUrl).trim();
+      updateData.link = String(linkUrl).trim();
+    } else if (link !== undefined) {
+      updateData.link = String(link).trim();
+      updateData.linkUrl = String(link).trim();
+    }
     if (order !== undefined) updateData.order = Number(order);
-    if (active !== undefined) updateData.active = Boolean(active);
+    if (isActive !== undefined) {
+      updateData.active = Boolean(isActive);
+      updateData.isActive = Boolean(isActive);
+    } else if (active !== undefined) {
+      updateData.active = Boolean(active);
+      updateData.isActive = Boolean(active);
+    }
+    if (isCenterFeatured !== undefined) updateData.isCenterFeatured = Boolean(isCenterFeatured);
 
     if (isMongoConnected()) {
       try {
         const updated = await Banner.findByIdAndUpdate(id, updateData, { new: true });
         if (updated) {
-          return res.json(updated.toObject());
+          const docObj = updated.toObject();
+          return res.json({
+            ...docObj,
+            linkUrl: docObj.linkUrl || docObj.link || "",
+            link: docObj.link || docObj.linkUrl || "",
+            isActive: docObj.active !== false,
+            isCenterFeatured: Boolean(docObj.isCenterFeatured),
+          });
         }
       } catch (err) {
         console.warn("MongoDB update banner fallback to memory:", err);
@@ -204,7 +259,13 @@ router.put("/:id", async (req, res) => {
     const item = (memoryStore.banners || []).find((b) => b._id === id);
     if (item) {
       Object.assign(item, updateData, { updatedAt: new Date() });
-      return res.json(item);
+      return res.json({
+        ...item,
+        linkUrl: item.linkUrl || item.link || "",
+        link: item.link || item.linkUrl || "",
+        isActive: item.active !== false,
+        isCenterFeatured: Boolean(item.isCenterFeatured),
+      });
     }
 
     return res.status(404).json({ error: "Banner not found" });

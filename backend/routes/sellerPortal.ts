@@ -6,7 +6,7 @@ import Product from "../models/Product";
 import Order from "../models/Order";
 import SellerWithdrawal from "../models/SellerWithdrawal";
 import { isMongoConnected, memoryStore } from "../store";
-import { JWT_SECRET, getJwtSecret } from "../middleware/auth";
+import { getJwtSecret } from "../config/jwt";
 
 export interface SellerAuthedRequest extends Request {
   sellerId?: string;
@@ -405,17 +405,17 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     if (!sellerRecord) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ success: false, error: "Invalid credentials" });
     }
 
     // Enforce strict bcrypt authentication against stored hash
     if (!storedHash) {
-      return res.status(401).json({ error: "No password set for this seller account. Please contact support or reset password." });
+      return res.status(401).json({ success: false, error: "Invalid credentials" });
     }
 
     const isValid = await bcrypt.compare(password, storedHash);
     if (!isValid) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ success: false, error: "Invalid credentials" });
     }
 
     // CHECK APPROVAL STATUS: Only "approved" sellers can log in and manage products!
@@ -1011,14 +1011,28 @@ router.post("/wallet/withdraw", requireSellerAuth, async (req: SellerAuthedReque
       } catch (err) {
         console.warn("MongoDB atomic seller balance update error:", err);
       }
-    }
 
-    // In-memory fallback or sync
-    const memSeller = (memoryStore.sellers || []).find((s) => s._id === sellerId);
-    if (memSeller) {
-      memSeller.walletBalance = Math.max(0, ((memSeller as any).walletBalance || 0) - numAmount);
-      memSeller.pendingWithdrawals = ((memSeller as any).pendingWithdrawals || 0) + numAmount;
+      // If MongoDB is connected and the atomic update returned null (insufficient funds / concurrency),
+      // strictly return insufficient funds without falling back to stale in-memory state.
       if (!updatedSeller) {
+        return res.status(400).json({
+          success: false,
+          error: "Failed to deduct funds. Available balance was modified or is insufficient for this withdrawal.",
+        });
+      }
+    } else {
+      // In-memory mode only when MongoDB is completely offline
+      const memSeller = (memoryStore.sellers || []).find((s) => s._id === sellerId);
+      if (memSeller) {
+        const memBal = Number((memSeller as any).walletBalance || 0);
+        if (memBal < numAmount) {
+          return res.status(400).json({
+            success: false,
+            error: "Insufficient funds in wallet.",
+          });
+        }
+        memSeller.walletBalance = memBal - numAmount;
+        memSeller.pendingWithdrawals = ((memSeller as any).pendingWithdrawals || 0) + numAmount;
         updatedSeller = memSeller;
       }
     }

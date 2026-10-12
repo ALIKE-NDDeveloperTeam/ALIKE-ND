@@ -78,9 +78,20 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Product name and category are required" });
     }
 
-    const numericPrice = Number(price) || 0;
+    const numericPrice = Number(price);
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      return res.status(400).json({ error: "Product price must be a valid positive number greater than 0." });
+    }
+
     const numericMrp = mrp !== undefined && mrp !== null ? Number(mrp) : numericPrice;
-    const numericStock = Number(stock) || 0;
+    if (isNaN(numericMrp) || numericMrp < numericPrice) {
+      return res.status(400).json({ error: "MRP must be greater than or equal to the selling price." });
+    }
+
+    const numericStock = Math.max(0, Math.floor(Number(stock) || 0));
+    const numericRating = Math.min(5, Math.max(0, Number(rating) || 4.8));
+    const numericReviews = Math.max(0, Math.floor(Number(reviewsCount) || 0));
+
     const is20Min = eligibleFor20MinDelivery !== undefined
       ? Boolean(eligibleFor20MinDelivery)
       : (category.trim() === 'grocery' || category.trim() === 'food_delivery' || category.trim() === 'delivery');
@@ -97,7 +108,7 @@ router.post("/", async (req, res) => {
           eligibleFor20MinDelivery: is20Min,
           price: numericPrice,
           mrp: numericMrp,
-          rating: Number(rating) || 4.8,
+          rating: numericRating,
           reviewsCount: Number(reviewsCount) || 120,
           stock: numericStock,
           stockStatus: stockStatus || (numericStock <= 0 ? "Out of Stock" : numericStock <= 3 ? "Only 2 left!" : "In Stock"),

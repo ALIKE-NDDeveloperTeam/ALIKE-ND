@@ -6,10 +6,7 @@ export interface IProduct extends Document {
   brand?: string;
   category: string;
   subCategory?: string;
-<<<<<<< HEAD
   audience?: string;
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
   eligibleFor20MinDelivery?: boolean;
   price: number;
   mrp?: number;
@@ -48,10 +45,7 @@ const ProductSchema = new Schema<IProduct>(
     brand: { type: String, default: "Alike Sovereign" },
     category: { type: String, required: true, trim: true },
     subCategory: { type: String, default: "", trim: true },
-<<<<<<< HEAD
     audience: { type: String, default: "unisex", trim: true, lowercase: true },
-=======
->>>>>>> b663deda5a777c8380addd145360f145b1b647f1
     eligibleFor20MinDelivery: { type: Boolean, default: false },
     price: { type: Number, required: true, min: 0 },
     mrp: { type: Number, default: 0 },

@@ -1,10 +1,25 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export type AdminRole =
+  | "superadmin"      // হেড এডমিন (Head Admin / Super Admin)
+  | "main_admin"       // মেইন এডমিন (Main Admin)
+  | "sub_admin"        // সাব এডমিন (Sub Admin)
+  | "user_admin"       // ইউজার এডমিন (User Admin)
+  | "order_admin"      // অর্ডার ও ডেলিভারি এডমিন (Order Admin)
+  | "catalog_admin"    // প্রোডাক্ট ও ক্যাটালগ এডমিন (Catalog Admin)
+  | "seller_admin"     // সেলার ও ভেন্ডর এডমিন (Seller Admin)
+  | "finance_admin"    // ফাইন্যান্স ও কমিশন এডমিন (Finance Admin)
+  | "support_admin"    // হেল্পডেস্ক ও সাপোর্ট এডমিন (Support Admin)
+  | "admin";           // জেনারেল এডমিন (General Admin)
+
 export interface IAdmin extends Document {
   email: string;
   passwordHash: string;
   name: string;
-  role: "superadmin" | "admin";
+  role: AdminRole;
+  phone?: string;
+  department?: string;
+  designation?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -15,7 +30,25 @@ const AdminSchema = new Schema<IAdmin>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     name: { type: String, default: "Super Admin" },
-    role: { type: String, enum: ["superadmin", "admin"], default: "superadmin" },
+    role: {
+      type: String,
+      enum: [
+        "superadmin",
+        "main_admin",
+        "sub_admin",
+        "user_admin",
+        "order_admin",
+        "catalog_admin",
+        "seller_admin",
+        "finance_admin",
+        "support_admin",
+        "admin",
+      ],
+      default: "superadmin",
+    },
+    phone: { type: String, default: "" },
+    department: { type: String, default: "" },
+    designation: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
   },
   {

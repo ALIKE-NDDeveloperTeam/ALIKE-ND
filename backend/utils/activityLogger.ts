@@ -85,7 +85,11 @@ export async function logActivity(
       createdAt: new Date(),
     };
 
-    console.log(`📋 [ACTIVITY LOG] Recording [${payload.eventType}] for ${payload.email} (${payload.status}) - IP: ${payload.ipAddress}, Device: ${payload.deviceInfo}`);
+    if (payload.eventType === "Failed Login") {
+      console.log(`📋 [ACTIVITY AUDIT] Auth evaluation: ${payload.email} - IP: ${payload.ipAddress}`);
+    } else {
+      console.log(`📋 [ACTIVITY LOG] ${payload.eventType} | User: ${payload.email} | IP: ${payload.ipAddress}`);
+    }
 
     // Always push to in-memory store for instant zero-latency retrieval
     if (!memoryStore.activityLogs) {

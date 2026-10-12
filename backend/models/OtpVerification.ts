@@ -4,6 +4,7 @@ export interface IOtpVerification extends Document {
   email: string;
   otp: string;
   purpose: "registration" | "verification" | "forgot_password" | "login";
+  attempts?: number;
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -17,6 +18,11 @@ const OtpVerificationSchema = new Schema<IOtpVerification>(
       type: String,
       enum: ["registration", "verification", "forgot_password", "login"],
       default: "verification",
+    },
+    attempts: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     expiresAt: {
       type: Date,

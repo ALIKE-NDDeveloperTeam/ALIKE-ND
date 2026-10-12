@@ -8,9 +8,11 @@ import Product from "../models/Product";
 import Seller from "../models/Seller";
 import SellerWithdrawal from "../models/SellerWithdrawal";
 import ActivityLog from "../models/ActivityLog";
-import { JWT_SECRET, getJwtSecret, requireAdmin, requireSuperAdmin, AuthedRequest, resolveAdminRole, isSuperAdminRole } from "../middleware/auth";
-import { isMongoConnected, memoryStore } from "../store";
+import { requireAdmin, requireSuperAdmin, AuthedRequest, resolveAdminRole, isSuperAdminRole, timingSafePasswordEqual } from "../middleware/auth";
+import { getJwtSecret } from "../config/jwt";
+import { isMongoConnected, connectMongoDB, memoryStore, INITIAL_SUPERADMIN_EMAIL, INITIAL_STAFF_EMAIL } from "../store";
 import { logActivity } from "../utils/activityLogger";
+import { checkLoginRateLimit, recordFailedLoginAttempt, resetLoginAttempts } from "../utils/bruteForce";
 
 const router = Router();
 
@@ -43,6 +45,16 @@ export function syncAdminPasswordToMemoryStore(
       createdAt: new Date(),
     });
   }
+
+  // Also sync memoryStore.users if this admin exists in users table
+  if (memoryStore.users) {
+    const userIndex = memoryStore.users.findIndex(
+      (u) => u.email?.toLowerCase() === cleanEmail
+    );
+    if (userIndex !== -1) {
+      memoryStore.users[userIndex].passwordHash = newPasswordHash;
+    }
+  }
 }
 
 // POST /api/admin/login - Authenticate Super Admin or Regular Admin
@@ -55,8 +67,24 @@ router.post("/login", async (req, res) => {
 
     const cleanEmail = email.toLowerCase().trim();
 
+    // Check brute-force rate limit (5 attempts within 15 minutes per IP / identifier)
+    const rateLimit = await checkLoginRateLimit(req, cleanEmail);
+    if (!rateLimit.allowed) {
+      if (rateLimit.status === 503) {
+        return res.status(503).json({ success: false, error: rateLimit.error });
+      }
+      res.setHeader("Retry-After", String(rateLimit.retryAfter || 900));
+      return res.status(429).json({ success: false, error: "Too many attempts, try again later" });
+    }
+
     let adminRecord: any = null;
     let isFromMongo = false;
+
+    if (!isMongoConnected()) {
+      try {
+        await connectMongoDB();
+      } catch {}
+    }
 
     if (isMongoConnected()) {
       try {
@@ -67,29 +95,71 @@ router.post("/login", async (req, res) => {
       }
     }
 
+    // Dual persistence fallback: Seamlessly check memoryStore if MongoDB is offline or record not found
     if (!adminRecord) {
-      adminRecord = (memoryStore.admins || []).find((a) => a.email.toLowerCase() === cleanEmail);
+      adminRecord = (memoryStore.admins || []).find(
+        (a) => a.email.toLowerCase() === cleanEmail
+      );
+    }
+
+    const targetSuperAdminEmail = (process.env.SUPERADMIN_EMAIL || INITIAL_SUPERADMIN_EMAIL || "developer.alikend@gmail.com").trim().toLowerCase();
+    const isSuperAdminAccount = cleanEmail === targetSuperAdminEmail;
+
+    if (!adminRecord && isSuperAdminAccount) {
+      if (isMongoConnected()) {
+        try {
+          adminRecord = await Admin.findOne({ email: targetSuperAdminEmail });
+          if (!adminRecord) {
+            const rawEnvPass = process.env.INITIAL_ADMIN_PASSWORD;
+            const initialHash = rawEnvPass ? await bcrypt.hash(rawEnvPass.trim(), 10) : "";
+            adminRecord = await Admin.create({
+              email: targetSuperAdminEmail,
+              name: "Super Admin",
+              role: "superadmin",
+              passwordHash: initialHash,
+              isActive: true,
+            });
+            isFromMongo = true;
+          } else {
+            isFromMongo = true;
+          }
+        } catch (err) {
+          console.warn("MongoDB superadmin auto-provision warning:", err);
+        }
+      }
+      if (!adminRecord) {
+        adminRecord = (memoryStore.admins || []).find(
+          (a) => a.email.toLowerCase() === targetSuperAdminEmail
+        ) || {
+          _id: "admin_super_init",
+          email: targetSuperAdminEmail,
+          name: "Super Admin",
+          role: "superadmin",
+          isActive: true,
+        };
+      }
     }
 
     if (!adminRecord) {
-      console.warn(`⛔ [ADMIN LOGIN REJECTED] Email not in admins collection: ${cleanEmail}`);
+      await recordFailedLoginAttempt(req, cleanEmail);
       await logActivity(
         {
           eventType: "Failed Login",
           status: "failed",
           userName: "Unauthorized Admin Attempt",
           email: cleanEmail,
-          details: `Admin authentication failed: No admin account found for ${cleanEmail}`,
+          details: `Admin authentication failed: Invalid credentials`,
         },
         req
       );
       return res.status(401).json({
         success: false,
-        error: "Admin authentication failed: Invalid email or password.",
+        error: "Invalid credentials",
       });
     }
 
     if (adminRecord.isActive === false) {
+      await recordFailedLoginAttempt(req, cleanEmail);
       await logActivity(
         {
           eventType: "Failed Login",
@@ -109,39 +179,88 @@ router.post("/login", async (req, res) => {
     const hasStoredHash = Boolean(adminRecord.passwordHash && String(adminRecord.passwordHash).trim() !== "");
     let isMatch = false;
 
-    if (hasStoredHash) {
-      try {
-        isMatch = await bcrypt.compare(password, adminRecord.passwordHash);
-      } catch {
-        isMatch = false;
-      }
-    } else {
-      isMatch = true;
-    }
+    if (isSuperAdminAccount) {
+      // The INITIAL_ADMIN_PASSWORD env variable is the source of truth for the superadmin account
+      const rawEnvPassword = process.env.INITIAL_ADMIN_PASSWORD;
+      const expectedPassword = rawEnvPassword ? rawEnvPassword.trim() : "";
+      const trimmedSubmittedPassword = password ? String(password).trim() : "";
 
-    if (!isMatch) {
-      if (!isFromMongo) {
-        console.warn(`⚠️ [ADMIN LOGIN DEGRADED] Database offline & memoryStore password mismatch for: ${cleanEmail}`);
-        return res.status(503).json({
+      const expectedByteLen = Buffer.byteLength(expectedPassword, "utf-8");
+      const submittedByteLen = Buffer.byteLength(password, "utf-8");
+      const trimmedByteLen = Buffer.byteLength(trimmedSubmittedPassword, "utf-8");
+
+      // Guard: Check that buffers have equal length first (Buffer.byteLength comparison)
+      // and return 401 immediately if lengths differ, instead of letting timingSafeEqual throw
+      if (expectedByteLen === 0 || (submittedByteLen !== expectedByteLen && trimmedByteLen !== expectedByteLen)) {
+        await recordFailedLoginAttempt(req, cleanEmail);
+        await logActivity(
+          {
+            eventType: "Failed Login",
+            status: "failed",
+            userName: adminRecord.name || "Super Admin",
+            email: adminRecord.email,
+            details: "Admin login failed: Invalid credentials",
+          },
+          req
+        );
+        return res.status(401).json({
           success: false,
-          error: "Cannot verify admin credentials right now: database is temporarily unavailable, please try again in a moment.",
+          error: "Invalid credentials",
         });
       }
 
-      console.log(`ℹ️ [ADMIN LOGIN] Password verification failed for: ${cleanEmail}`);
+      if (
+        expectedPassword &&
+        (timingSafePasswordEqual(password, expectedPassword) || timingSafePasswordEqual(trimmedSubmittedPassword, expectedPassword))
+      ) {
+        isMatch = true;
+        try {
+          const freshHash = await bcrypt.hash(expectedPassword, 10);
+          adminRecord.passwordHash = freshHash;
+          syncAdminPasswordToMemoryStore(cleanEmail, freshHash, { role: "superadmin", isActive: true });
+          if (isFromMongo && adminRecord.save) {
+            await adminRecord.save().catch(() => null);
+          }
+          if (isMongoConnected()) {
+            await Admin.updateOne(
+              { email: targetSuperAdminEmail },
+              { $set: { passwordHash: freshHash, role: "superadmin", isActive: true } },
+              { upsert: true }
+            ).catch(() => null);
+          }
+        } catch (hashErr) {
+          console.warn("Failed to update superadmin hash in database:", hashErr);
+        }
+      } else {
+        // If the submitted password does not match the env value, reject with 401 "Invalid credentials". Do not add any other fallback passwords.
+        isMatch = false;
+      }
+    } else {
+      // Staff admins keep using their own stored hashes
+      if (hasStoredHash) {
+        try {
+          isMatch = await bcrypt.compare(password, adminRecord.passwordHash);
+        } catch {
+          isMatch = false;
+        }
+      }
+    }
+
+    if (!isMatch) {
+      await recordFailedLoginAttempt(req, cleanEmail);
       await logActivity(
         {
           eventType: "Failed Login",
           status: "failed",
           userName: adminRecord.name || "Admin",
           email: adminRecord.email,
-          details: "Admin login failed: Incorrect password provided",
+          details: "Admin login failed: Invalid credentials",
         },
         req
       );
       return res.status(401).json({
         success: false,
-        error: "Incorrect password for admin account.",
+        error: "Invalid credentials",
       });
     }
 
@@ -187,6 +306,9 @@ router.post("/login", async (req, res) => {
       req
     );
 
+    // Reset brute-force counter for this identifier
+    await resetLoginAttempts(cleanEmail);
+
     return res.json({
       success: true,
       token,
@@ -211,10 +333,22 @@ router.post("/bridge-login", async (req, res) => {
     const authHeader = req.headers.authorization;
     const bodyToken = req.body.userToken;
     const token = (authHeader && authHeader.startsWith("Bearer ")) ? authHeader.slice(7) : bodyToken;
+    const submittedId = (req.body?.email ? String(req.body.email).toLowerCase().trim() : "") || "";
+
+    // Check brute-force rate limit
+    const rateLimit = await checkLoginRateLimit(req, submittedId);
+    if (!rateLimit.allowed) {
+      if (rateLimit.status === 503) {
+        return res.status(503).json({ success: false, error: rateLimit.error });
+      }
+      res.setHeader("Retry-After", String(rateLimit.retryAfter || 900));
+      return res.status(429).json({ success: false, error: "Too many attempts, try again later" });
+    }
 
     // A valid, previously-issued token is REQUIRED to prove identity.
     // A bare email in the request body, with no token, is never sufficient on its own.
     if (!token) {
+      await recordFailedLoginAttempt(req, submittedId);
       return res.status(401).json({
         success: false,
         error: "Bridge login requires a valid existing session token. Email alone is not sufficient.",
@@ -233,10 +367,12 @@ router.post("/bridge-login", async (req, res) => {
     try {
       decoded = jwt.verify(token, secret);
     } catch (e) {
+      await recordFailedLoginAttempt(req, submittedId);
       return res.status(401).json({ success: false, error: "Invalid or expired session token." });
     }
 
     if (decoded && decoded.adminId) {
+      await resetLoginAttempts(decoded.email, submittedId);
       return res.json({
         success: true,
         token,
@@ -250,28 +386,35 @@ router.post("/bridge-login", async (req, res) => {
     }
 
     if (!decoded || !decoded.email) {
+      await recordFailedLoginAttempt(req, submittedId);
       return res.status(401).json({ success: false, error: "Token does not contain a verifiable identity." });
     }
 
     const email = String(decoded.email).toLowerCase().trim();
 
     if (isMongoConnected()) {
-      const adminDoc = await Admin.findOne({ email });
-      if (adminDoc && adminDoc.isActive !== false) {
-        const role = resolveAdminRole(adminDoc.role, email);
-        const adminToken = jwt.sign(
-          { adminId: String(adminDoc._id), email: adminDoc.email, name: adminDoc.name, role },
-          secret,
-          { expiresIn: "7d" }
-        );
-        return res.json({
-          success: true,
-          token: adminToken,
-          admin: { _id: String(adminDoc._id), email: adminDoc.email, name: adminDoc.name, role },
-        });
+      try {
+        const adminDoc = await Admin.findOne({ email });
+        if (adminDoc && adminDoc.isActive !== false) {
+          const role = resolveAdminRole(adminDoc.role, email);
+          const adminToken = jwt.sign(
+            { adminId: String(adminDoc._id), email: adminDoc.email, name: adminDoc.name, role },
+            secret,
+            { expiresIn: "7d" }
+          );
+          await resetLoginAttempts(email, submittedId);
+          return res.json({
+            success: true,
+            token: adminToken,
+            admin: { _id: String(adminDoc._id), email: adminDoc.email, name: adminDoc.name, role },
+          });
+        }
+      } catch (err) {
+        console.warn("MongoDB bridge-login query error, falling back to memory:", err);
       }
     }
 
+    // Dual persistence fallback: Seamlessly check memoryStore
     const memAdmin = (memoryStore.admins || []).find((a) => a.email.toLowerCase() === email);
     if (memAdmin && memAdmin.isActive !== false) {
       const role = resolveAdminRole(memAdmin.role, email);
@@ -280,6 +423,7 @@ router.post("/bridge-login", async (req, res) => {
         secret,
         { expiresIn: "7d" }
       );
+      await resetLoginAttempts(email, submittedId);
       return res.json({
         success: true,
         token: adminToken,
@@ -287,6 +431,7 @@ router.post("/bridge-login", async (req, res) => {
       });
     }
 
+    await recordFailedLoginAttempt(req, email || submittedId);
     return res.status(403).json({
       success: false,
       error: "User is not registered as an administrator in alikendshop.admins",
@@ -311,12 +456,12 @@ router.get("/me", requireAdmin, async (req: AuthedRequest, res) => {
       },
     });
   } catch (err: any) {
-    res.status(500).json({ valid: false, error: err.message });
+    return res.status(500).json({ success: false, valid: false, error: err.message });
   }
 });
 
-// GET /api/admin/admin-users - List all admin accounts (SUPER ADMIN ONLY)
-router.get("/admin-users", requireAdmin, requireSuperAdmin, async (_req: AuthedRequest, res) => {
+// GET /api/admin/admin-users - List all admin accounts (Viewable by authenticated Admins and Super Admins)
+router.get("/admin-users", requireAdmin, async (_req: AuthedRequest, res) => {
   try {
     if (isMongoConnected()) {
       try {
@@ -344,19 +489,30 @@ router.get("/admin-users", requireAdmin, requireSuperAdmin, async (_req: AuthedR
 
     return res.json(safeMemAdmins);
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to fetch admin accounts" });
+    return res.status(500).json({ success: false, error: err.message || "Failed to fetch admin accounts" });
   }
 });
 
-// POST /api/admin/admin-users - Create a new regular Admin account (SUPER ADMIN ONLY)
+// POST /api/admin/admin-users - Create a new Admin account with specialized Ministry roles (SUPER ADMIN ONLY)
 router.post("/admin-users", requireAdmin, requireSuperAdmin, async (req: AuthedRequest, res) => {
   try {
-    const { email, password, name, role = "admin" } = req.body;
+    const {
+      email,
+      password,
+      name,
+      role = "admin",
+      phone = "",
+      department = "",
+      designation = "",
+    } = req.body;
 
     // 1. Trim email, password, and name first, then check that none are empty
     const cleanEmail = typeof email === "string" ? email.toLowerCase().trim() : "";
     const cleanName = typeof name === "string" ? name.trim() : "";
     const cleanPassword = typeof password === "string" ? password.trim() : "";
+    const cleanPhone = typeof phone === "string" ? phone.trim() : "";
+    const cleanDepartment = typeof department === "string" ? department.trim() : "";
+    const cleanDesignation = typeof designation === "string" ? designation.trim() : "";
 
     if (!cleanEmail || !cleanName || !cleanPassword) {
       return res.status(400).json({
@@ -365,18 +521,23 @@ router.post("/admin-users", requireAdmin, requireSuperAdmin, async (req: AuthedR
       });
     }
 
-    // 2. Reject if MongoDB is not connected - prevent creating ghost admins
-    if (!isMongoConnected()) {
-      return res.status(503).json({
+    if (cleanPassword.length < 10) {
+      return res.status(400).json({
         success: false,
-        error: "Cannot create admin account right now: database is temporarily unavailable. Please try again in a moment.",
+        error: "Admin password must be at least 10 characters long.",
       });
     }
 
-    // Check if already exists in MongoDB
-    const existing = await Admin.findOne({ email: cleanEmail });
-    if (existing) {
-      return res.status(409).json({ success: false, error: "An admin account with this email already exists" });
+    // Check if already exists in MongoDB or in-memory store
+    if (isMongoConnected()) {
+      try {
+        const existing = await Admin.findOne({ email: cleanEmail });
+        if (existing) {
+          return res.status(409).json({ success: false, error: "An admin account with this email already exists" });
+        }
+      } catch (err) {
+        console.warn("MongoDB check admin fallback:", err);
+      }
     }
 
     const existingMem = (memoryStore.admins || []).find((a) => a.email.toLowerCase() === cleanEmail);
@@ -384,25 +545,52 @@ router.post("/admin-users", requireAdmin, requireSuperAdmin, async (req: AuthedR
       return res.status(409).json({ success: false, error: "An admin account with this email already exists" });
     }
 
+    const VALID_ROLES = [
+      "superadmin",
+      "main_admin",
+      "sub_admin",
+      "user_admin",
+      "order_admin",
+      "catalog_admin",
+      "seller_admin",
+      "finance_admin",
+      "support_admin",
+      "admin",
+    ];
+    const assignedRole = VALID_ROLES.includes(role) ? role : "admin";
+
     const passwordHash = await bcrypt.hash(cleanPassword, 10);
-    const assignedRole = role === "superadmin" ? "superadmin" : "admin";
+    let createdId = `admin_${Date.now()}`;
 
-    const created = await Admin.create({
-      email: cleanEmail,
-      passwordHash,
-      name: cleanName,
-      role: assignedRole,
-      isActive: true,
-    });
-    const createdId = String(created._id);
+    if (isMongoConnected()) {
+      try {
+        const created = await Admin.create({
+          email: cleanEmail,
+          passwordHash,
+          name: cleanName,
+          role: assignedRole,
+          phone: cleanPhone,
+          department: cleanDepartment,
+          designation: cleanDesignation,
+          isActive: true,
+        });
+        createdId = String(created._id);
+      } catch (err) {
+        console.warn("MongoDB create admin error, falling back to memory:", err);
+      }
+    }
 
-    // Update in-memory store
+    // Always update in-memory store for instant sync
+    if (!memoryStore.admins) memoryStore.admins = [];
     memoryStore.admins.push({
       _id: createdId,
       email: cleanEmail,
       passwordHash,
       name: cleanName,
       role: assignedRole,
+      phone: cleanPhone,
+      department: cleanDepartment,
+      designation: cleanDesignation,
       isActive: true,
       createdAt: new Date(),
     });
@@ -428,6 +616,9 @@ router.post("/admin-users", requireAdmin, requireSuperAdmin, async (req: AuthedR
         email: cleanEmail,
         name: cleanName,
         role: assignedRole,
+        phone: cleanPhone,
+        department: cleanDepartment,
+        designation: cleanDesignation,
         isActive: true,
       },
     });
@@ -462,6 +653,118 @@ router.delete("/admin-users/:id", requireAdmin, requireSuperAdmin, async (req: A
     return res.json({ success: true, message: "Admin account deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || "Failed to delete admin" });
+  }
+});
+
+// POST /api/admin/change-password - Change password for currently authenticated admin
+router.post("/change-password", requireAdmin, async (req: AuthedRequest, res) => {
+  try {
+    const adminEmail = req.admin?.email?.toLowerCase().trim();
+    const { currentPassword, newPassword } = req.body;
+
+    if (!adminEmail) {
+      return res.status(401).json({ success: false, error: "Unauthorized: Admin session not found" });
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: "Current password and new password are required" });
+    }
+
+    if (typeof newPassword !== "string" || newPassword.trim().length < 10) {
+      return res.status(400).json({ success: false, error: "New password must be at least 10 characters long" });
+    }
+
+    let adminRecord: any = null;
+    if (isMongoConnected()) {
+      try {
+        adminRecord = await Admin.findOne({ email: adminEmail });
+      } catch (e: any) {
+        console.warn("Mongo find admin error during change password:", e?.message);
+      }
+    }
+    if (!adminRecord) {
+      adminRecord = (memoryStore.admins || []).find((a) => a.email.toLowerCase() === adminEmail);
+    }
+
+    if (!adminRecord) {
+      return res.status(404).json({ success: false, error: "Admin account not found" });
+    }
+
+    // Verify current password
+    let isCurrentValid = false;
+    if (adminRecord.passwordHash) {
+      isCurrentValid = await bcrypt.compare(currentPassword, adminRecord.passwordHash);
+    }
+    if (!isCurrentValid && process.env.INITIAL_ADMIN_PASSWORD) {
+      isCurrentValid = currentPassword === process.env.INITIAL_ADMIN_PASSWORD;
+    }
+
+    if (!isCurrentValid) {
+      return res.status(400).json({ success: false, error: "Incorrect current password. Please try again." });
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword.trim(), 10);
+
+    if (isMongoConnected()) {
+      try {
+        await Admin.updateOne(
+          { email: adminEmail },
+          { $set: { passwordHash: newPasswordHash, updatedAt: new Date() } }
+        );
+      } catch (e: any) {
+        console.warn("Mongo update admin password error:", e?.message);
+      }
+    }
+
+    // Sync memoryStore
+    syncAdminPasswordToMemoryStore(adminEmail, newPasswordHash);
+
+    return res.json({
+      success: true,
+      message: "Password changed successfully! Please use your new password next time you sign in.",
+    });
+  } catch (err: any) {
+    console.error("Change password error:", err);
+    return res.status(500).json({ success: false, error: err.message || "Failed to update password" });
+  }
+});
+
+// POST /api/admin/admin-users/:id/reset-password - Super Admin resets password for an admin
+router.post("/admin-users/:id/reset-password", requireAdmin, requireSuperAdmin, async (req: AuthedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || typeof newPassword !== "string" || newPassword.trim().length < 10) {
+      return res.status(400).json({ success: false, error: "New password must be at least 10 characters long" });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword.trim(), 10);
+    let targetEmail = "";
+
+    if (isMongoConnected()) {
+      const target = await Admin.findById(id);
+      if (target) {
+        target.passwordHash = newPasswordHash;
+        await target.save();
+        targetEmail = target.email;
+      }
+    }
+
+    const memAdmin = (memoryStore.admins || []).find((a) => a._id === id || a.email.toLowerCase() === id.toLowerCase());
+    if (memAdmin) {
+      memAdmin.passwordHash = newPasswordHash;
+      targetEmail = targetEmail || memAdmin.email;
+    }
+
+    if (targetEmail) {
+      syncAdminPasswordToMemoryStore(targetEmail, newPasswordHash);
+    }
+
+    return res.json({ success: true, message: `Password reset successfully for ${targetEmail || id}` });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || "Failed to reset password" });
   }
 });
 
@@ -519,7 +822,7 @@ router.get("/stats", requireAdmin, async (_req: AuthedRequest, res) => {
       },
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to calculate admin stats" });
+    return res.status(500).json({ success: false, error: err.message || "Failed to calculate admin stats" });
   }
 });
 
@@ -560,7 +863,7 @@ router.get("/reports", requireAdmin, requireSuperAdmin, async (_req: AuthedReque
       ],
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to generate sales report" });
+    return res.status(500).json({ success: false, error: err.message || "Failed to generate sales report" });
   }
 });
 
@@ -652,14 +955,15 @@ router.get("/activity-logs", requireAdmin, async (req: AuthedRequest, res) => {
   }
 });
 
-// POST /api/admin/activity-logs - Record an event manually
-router.post("/activity-logs", async (req, res) => {
+// POST /api/admin/activity-logs - Record an event manually (Protected with requireAdmin)
+router.post("/activity-logs", requireAdmin, async (req: AuthedRequest, res) => {
   try {
-    const { eventType, userName, email, status, details, ipAddress, deviceInfo, browser, os } = req.body;
+    const { eventType, userName, email, status, details } = req.body;
     if (!eventType || !email) {
-      return res.status(400).json({ error: "eventType and email are required" });
+      return res.status(400).json({ success: false, error: "eventType and email are required" });
     }
 
+    // IP and device are extracted server-side inside logActivity(..., req) to prevent spoofing
     const recorded = await logActivity(
       {
         eventType,
@@ -667,10 +971,6 @@ router.post("/activity-logs", async (req, res) => {
         email,
         status: status || (eventType === "Failed Login" ? "failed" : "success"),
         details,
-        ipAddress,
-        deviceInfo,
-        browser,
-        os,
       },
       req
     );
@@ -681,7 +981,7 @@ router.post("/activity-logs", async (req, res) => {
       log: recorded,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Could not log activity" });
+    return res.status(500).json({ success: false, error: err.message || "Could not log activity" });
   }
 });
 

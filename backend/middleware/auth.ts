@@ -1,54 +1,30 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import Admin from "../models/Admin";
 import { isMongoConnected, memoryStore } from "../store";
 
-// Lazy getter for JWT_SECRET - never crashes the entire server/serverless function at module load time.
-// Public, unauthenticated routes (browsing products, homepage, etc.) remain fully functional even if JWT_SECRET is unconfigured.
-export function getJwtSecret(): string | null {
-  const secret = process.env.JWT_SECRET?.trim();
-  return secret && secret.length > 0 ? secret : null;
+// Timing-safe password equality comparison
+export function timingSafePasswordEqual(submitted: string, expected: string): boolean {
+  if (!submitted || !expected) return false;
+  const bufA = Buffer.from(submitted, "utf-8");
+  const bufB = Buffer.from(expected, "utf-8");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
-// Log a prominent warning at server startup if JWT_SECRET is missing without crashing the process
-if (!getJwtSecret()) {
-  console.error(
-    "\n===============================================================================\n" +
-    "⚠️  CRITICAL CONFIGURATION WARNING: JWT_SECRET environment variable is not set!\n" +
-    "    - Public routes (products, categories, homepage) will continue to work.\n" +
-    "    - Authenticated routes and token operations will return HTTP 503 JSON errors.\n" +
-    "    - ACTION: Set JWT_SECRET in your Vercel or production Environment Variables.\n" +
-    "===============================================================================\n"
-  );
-}
+import { getJwtSecret } from "../config/jwt";
+export { getJwtSecret };
 
-// Dynamic proxy export for backward compatibility with existing imports: `import { JWT_SECRET } from ...`
-// Reading JWT_SECRET at runtime resolves to process.env.JWT_SECRET lazily.
-export const JWT_SECRET: string = new Proxy(
-  {},
-  {
-    get(_target, prop) {
-      if (prop === Symbol.toPrimitive || prop === "toString" || prop === "valueOf") {
-        return () => {
-          const secret = getJwtSecret();
-          if (!secret) {
-            throw new Error(
-              "JWT_SECRET is not configured in environment variables. Authenticated operations cannot proceed."
-            );
-          }
-          return secret;
-        };
-      }
-      const secret = getJwtSecret();
-      if (!secret) {
-        throw new Error(
-          "JWT_SECRET is not configured in environment variables. Authenticated operations cannot proceed."
-        );
-      }
-      return (secret as any)[prop];
-    },
-  }
-) as unknown as string;
+export interface CustomerAuthedRequest extends Request {
+  userId?: string;
+  userEmail?: string;
+  user?: {
+    _id: string;
+    email: string;
+    role: string;
+  };
+}
 
 export interface AuthedRequest extends Request {
   adminId?: string;
@@ -56,10 +32,23 @@ export interface AuthedRequest extends Request {
     _id: string;
     email: string;
     name: string;
-    role: "superadmin" | "admin";
+    role: string;
     isActive?: boolean;
   };
 }
+
+export const ALL_ADMIN_ROLES = [
+  "superadmin",
+  "main_admin",
+  "sub_admin",
+  "user_admin",
+  "order_admin",
+  "catalog_admin",
+  "seller_admin",
+  "finance_admin",
+  "support_admin",
+  "admin",
+];
 
 export function isSuperAdminRole(recordOrRole?: { role?: string; email?: string } | string, emailFallback?: string): boolean {
   if (!recordOrRole) return false;
@@ -92,8 +81,12 @@ export function isSuperAdminRole(recordOrRole?: { role?: string; email?: string 
   return false;
 }
 
-export function resolveAdminRole(recordOrRole?: { role?: string; email?: string } | string, emailFallback?: string): "superadmin" | "admin" {
-  return isSuperAdminRole(recordOrRole, emailFallback) ? "superadmin" : "admin";
+export function resolveAdminRole(recordOrRole?: { role?: string; email?: string } | string, emailFallback?: string): string {
+  if (isSuperAdminRole(recordOrRole, emailFallback)) {
+    return "superadmin";
+  }
+  const role = typeof recordOrRole === "string" ? recordOrRole : recordOrRole?.role;
+  return role && ALL_ADMIN_ROLES.includes(role) ? role : "admin";
 }
 
 export async function requireAdmin(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -124,8 +117,12 @@ export async function requireAdmin(req: AuthedRequest, res: Response, next: Next
     });
   }
 
-  // Check if token is for a regular customer/user instead of an admin
-  if (!payload || !payload.adminId || payload.role === "customer" || payload.userId) {
+  // Strict decoded JWT role check: role must be one of the recognized admin roles
+  // Regular customer tokens (role: 'customer', userId presence) or invalid roles are strictly rejected with 403
+  const tokenRole = payload?.role;
+  const hasValidAdminRole = ALL_ADMIN_ROLES.includes(tokenRole);
+
+  if (!payload || !payload.adminId || !hasValidAdminRole || payload.role === "customer" || payload.userId) {
     return res.status(403).json({
       success: false,
       error: "Access denied: Admin privileges required. Regular customer accounts cannot access admin routes.",
@@ -206,5 +203,50 @@ export function requireSuperAdmin(req: AuthedRequest, res: Response, next: NextF
 
   return next();
 }
+
+/**
+ * Middleware to authenticate customer accounts (Bearer token)
+ * Prevents IDOR by populating req.userEmail from the verified token
+ */
+export async function requireCustomerAuth(req: CustomerAuthedRequest, res: Response, next: NextFunction) {
+  const secret = getJwtSecret();
+  if (!secret) {
+    return res.status(503).json({
+      success: false,
+      error: "Authentication service is temporarily misconfigured. Please contact support.",
+    });
+  }
+
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({
+      success: false,
+      error: "Authentication required: Missing or invalid Authorization header.",
+    });
+  }
+
+  const token = header.slice(7);
+  try {
+    const payload = jwt.verify(token, secret) as any;
+    if (!payload || (!payload.userId && !payload.email)) {
+      return res.status(401).json({ success: false, error: "Invalid customer session token." });
+    }
+
+    req.userId = payload.userId ? String(payload.userId) : undefined;
+    req.userEmail = payload.email ? String(payload.email).toLowerCase().trim() : undefined;
+    req.user = {
+      _id: String(payload.userId || ""),
+      email: String(payload.email || "").toLowerCase().trim(),
+      role: payload.role || "customer",
+    };
+    return next();
+  } catch (err: any) {
+    return res.status(401).json({
+      success: false,
+      error: "Session expired or invalid. Please sign in again.",
+    });
+  }
+}
+
 
 

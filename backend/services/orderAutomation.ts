@@ -9,13 +9,21 @@ export const AUTOMATION_INTERVALS = {
   SHIPPED_TO_DELIVERED_MINUTES: 60,
 };
 
+// Throttle in-memory DB scans to at most once every 60 seconds (Problem #8)
+let lastProgressionTimestamp = 0;
+
 /**
  * Automatically progresses order statuses based on timeline milestones
  * unless an administrator has manually overridden the order status.
  */
-export async function progressOrderStatuses(): Promise<{ updatedCount: number }> {
-  let updatedCount = 0;
+export async function progressOrderStatuses(force: boolean = false): Promise<{ updatedCount: number }> {
   const now = Date.now();
+  if (!force && now - lastProgressionTimestamp < 60000) {
+    return { updatedCount: 0 };
+  }
+  lastProgressionTimestamp = now;
+
+  let updatedCount = 0;
   const approvedToShippedMs = AUTOMATION_INTERVALS.APPROVED_TO_SHIPPED_MINUTES * 60 * 1000;
   const shippedToDeliveredMs = AUTOMATION_INTERVALS.SHIPPED_TO_DELIVERED_MINUTES * 60 * 1000;
 
